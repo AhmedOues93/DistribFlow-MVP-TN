@@ -116,6 +116,9 @@ model Customer {
   paymentTermsDays Int                   @default(0)
   whatsapp         String?
   notes            String?
+  active           Boolean               @default(true)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
   tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   addresses        CustomerAddress[]
   orders           SalesOrder[]
@@ -123,6 +126,7 @@ model Customer {
 
   @@unique([tenantId, phone])
   @@unique([tenantId, taxIdentifier])
+  @@index([tenantId, active, name])
 }
 
 model CustomerAddress {
