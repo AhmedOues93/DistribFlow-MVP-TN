@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: distribflow
+      POSTGRES_PASSWORD: distribflow
+      POSTGRES_DB: distribflow
+    ports: ["5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://distribflow:distribflow@db:5432/distribflow?schema=public
+    ports: ["3000:3000"]
+    depends_on: [db]
+volumes:
+  postgres_data:
