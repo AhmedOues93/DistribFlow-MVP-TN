@@ -1,0 +1,58 @@
+CREATE SCHEMA IF NOT EXISTS "public";
+
+CREATE TYPE "MembershipRole" AS ENUM ('PLATFORM_ADMIN', 'OWNER', 'SALES_AGENT', 'WAREHOUSE_MANAGER', 'DRIVER', 'ACCOUNTANT', 'VIEWER');
+CREATE TYPE "OrderStatus" AS ENUM ('DRAFT', 'CONFIRMED', 'PREPARED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED', 'RETURNED');
+CREATE TYPE "MovementType" AS ENUM ('PURCHASE_RECEIPT', 'SALE', 'RETURN', 'DAMAGE', 'ADJUSTMENT', 'TRANSFER_IN', 'TRANSFER_OUT');
+CREATE TYPE "LedgerType" AS ENUM ('INVOICE', 'COLLECTION', 'CREDIT', 'ADJUSTMENT');
+
+CREATE TABLE "Tenant" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "taxIdentifier" TEXT, "currency" TEXT NOT NULL DEFAULT 'TND', "timezone" TEXT NOT NULL DEFAULT 'Africa/Tunis', "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "suspendedAt" TIMESTAMP(3), CONSTRAINT "Tenant_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "User" ("id" TEXT NOT NULL, "email" TEXT NOT NULL, "name" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "passwordHash" TEXT NOT NULL, CONSTRAINT "User_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Membership" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "userId" TEXT NOT NULL, "role" "MembershipRole" NOT NULL, CONSTRAINT "Membership_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Session" ("id" TEXT NOT NULL, "tokenHash" TEXT NOT NULL, "userId" TEXT NOT NULL, "expiresAt" TIMESTAMP(3) NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "Session_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Invitation" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "email" TEXT NOT NULL, "role" "MembershipRole" NOT NULL, "tokenHash" TEXT NOT NULL, "expiresAt" TIMESTAMP(3) NOT NULL, "acceptedAt" TIMESTAMP(3), CONSTRAINT "Invitation_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Customer" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "name" TEXT NOT NULL, "phone" TEXT, "taxIdentifier" TEXT, "creditLimit" DECIMAL(65,30) NOT NULL DEFAULT 0, "paymentTermsDays" INTEGER NOT NULL DEFAULT 0, "whatsapp" TEXT, "notes" TEXT, CONSTRAINT "Customer_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "CustomerAddress" ("id" TEXT NOT NULL, "customerId" TEXT NOT NULL, "label" TEXT NOT NULL, "address" TEXT NOT NULL, "isDefault" BOOLEAN NOT NULL DEFAULT false, CONSTRAINT "CustomerAddress_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "ProductCategory" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "name" TEXT NOT NULL, CONSTRAINT "ProductCategory_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Unit" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "name" TEXT NOT NULL, "symbol" TEXT NOT NULL, CONSTRAINT "Unit_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Product" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "sku" TEXT NOT NULL, "name" TEXT NOT NULL, "unit" TEXT NOT NULL DEFAULT 'Pièce', "categoryId" TEXT, "barcode" TEXT, "purchasePrice" DECIMAL(65,30) NOT NULL DEFAULT 0, "sellingPrice" DECIMAL(65,30) NOT NULL, "taxRate" DECIMAL(65,30) NOT NULL DEFAULT 19, "minimumStock" DECIMAL(65,30) NOT NULL DEFAULT 0, "active" BOOLEAN NOT NULL DEFAULT true, CONSTRAINT "Product_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Warehouse" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "name" TEXT NOT NULL, CONSTRAINT "Warehouse_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "StockLevel" ("id" TEXT NOT NULL, "productId" TEXT NOT NULL, "warehouseId" TEXT NOT NULL, "quantity" DECIMAL(65,30) NOT NULL DEFAULT 0, CONSTRAINT "StockLevel_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "StockMovement" ("id" TEXT NOT NULL, "warehouseId" TEXT NOT NULL, "productId" TEXT NOT NULL, "type" "MovementType" NOT NULL, "quantity" DECIMAL(65,30) NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "createdById" TEXT NOT NULL, "reference" TEXT, CONSTRAINT "StockMovement_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "SalesOrder" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "customerId" TEXT NOT NULL, "number" TEXT NOT NULL, "status" "OrderStatus" NOT NULL DEFAULT 'DRAFT', "requestedDate" TIMESTAMP(3), "total" DECIMAL(65,30) NOT NULL DEFAULT 0, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "SalesOrder_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "SalesOrderItem" ("id" TEXT NOT NULL, "orderId" TEXT NOT NULL, "productId" TEXT NOT NULL, "quantity" DECIMAL(65,30) NOT NULL, "unitPrice" DECIMAL(65,30) NOT NULL, "taxRate" DECIMAL(65,30) NOT NULL, CONSTRAINT "SalesOrderItem_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "CustomerLedgerEntry" ("id" TEXT NOT NULL, "customerId" TEXT NOT NULL, "type" "LedgerType" NOT NULL, "amount" DECIMAL(65,30) NOT NULL, "dueDate" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "reference" TEXT, CONSTRAINT "CustomerLedgerEntry_pkey" PRIMARY KEY ("id"));
+
+CREATE UNIQUE INDEX "Tenant_taxIdentifier_key" ON "Tenant"("taxIdentifier");
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX "Membership_tenantId_userId_key" ON "Membership"("tenantId", "userId");
+CREATE UNIQUE INDEX "Session_tokenHash_key" ON "Session"("tokenHash");
+CREATE UNIQUE INDEX "Invitation_tokenHash_key" ON "Invitation"("tokenHash");
+CREATE UNIQUE INDEX "Invitation_tenantId_email_key" ON "Invitation"("tenantId", "email");
+CREATE UNIQUE INDEX "Customer_tenantId_phone_key" ON "Customer"("tenantId", "phone");
+CREATE UNIQUE INDEX "Customer_tenantId_taxIdentifier_key" ON "Customer"("tenantId", "taxIdentifier");
+CREATE UNIQUE INDEX "Product_tenantId_sku_key" ON "Product"("tenantId", "sku");
+CREATE UNIQUE INDEX "ProductCategory_tenantId_name_key" ON "ProductCategory"("tenantId", "name");
+CREATE UNIQUE INDEX "Unit_tenantId_symbol_key" ON "Unit"("tenantId", "symbol");
+CREATE UNIQUE INDEX "StockLevel_productId_warehouseId_key" ON "StockLevel"("productId", "warehouseId");
+CREATE UNIQUE INDEX "SalesOrder_tenantId_number_key" ON "SalesOrder"("tenantId", "number");
+
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;
+ALTER TABLE "Membership" ADD CONSTRAINT "Membership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE;
+ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE;
+ALTER TABLE "Invitation" ADD CONSTRAINT "Invitation_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;
+ALTER TABLE "Customer" ADD CONSTRAINT "Customer_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;
+ALTER TABLE "CustomerAddress" ADD CONSTRAINT "CustomerAddress_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE;
+ALTER TABLE "ProductCategory" ADD CONSTRAINT "ProductCategory_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;
+ALTER TABLE "Unit" ADD CONSTRAINT "Unit_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;
+ALTER TABLE "Product" ADD CONSTRAINT "Product_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;
+ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "ProductCategory"("id") ON DELETE SET NULL;
+ALTER TABLE "Warehouse" ADD CONSTRAINT "Warehouse_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;
+ALTER TABLE "StockLevel" ADD CONSTRAINT "StockLevel_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE;
+ALTER TABLE "StockLevel" ADD CONSTRAINT "StockLevel_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "Warehouse"("id") ON DELETE CASCADE;
+ALTER TABLE "StockMovement" ADD CONSTRAINT "StockMovement_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "Warehouse"("id");
+ALTER TABLE "StockMovement" ADD CONSTRAINT "StockMovement_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id");
+ALTER TABLE "SalesOrder" ADD CONSTRAINT "SalesOrder_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;
+ALTER TABLE "SalesOrder" ADD CONSTRAINT "SalesOrder_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id");
+ALTER TABLE "SalesOrderItem" ADD CONSTRAINT "SalesOrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "SalesOrder"("id") ON DELETE CASCADE;
+ALTER TABLE "SalesOrderItem" ADD CONSTRAINT "SalesOrderItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id");
+ALTER TABLE "CustomerLedgerEntry" ADD CONSTRAINT "CustomerLedgerEntry_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id");
