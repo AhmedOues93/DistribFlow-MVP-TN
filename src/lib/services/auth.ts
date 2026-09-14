@@ -14,6 +14,7 @@ async function hashPassword(password: string) { const salt = randomBytes(16).toS
 async function verifyPassword(password: string, stored: string) { const [salt, expected] = stored.split(":"); const actual = (await scrypt(password, salt, 64) as Buffer); return timingSafeEqual(actual, Buffer.from(expected, "hex")); }
 
 export type SessionContext = { tenantId: string; role: Role; userId: string };
+export type SessionDetails = SessionContext & { userName: string; tenantName: string };
 
 export async function getSessionContext(token: string | undefined): Promise<SessionContext | null> {
   if (!token) return null;
@@ -31,6 +32,16 @@ export async function requireRequestContext(request: NextRequest): Promise<Sessi
   if (!context) throw new Error("Authentification requise");
   return context;
 }
+
+export async function getSessionDetails(token: string | undefined): Promise<SessionDetails | null> {
+  if (!token) return null;
+  const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: { include: { memberships: { include: { tenant: true } } } } } });
+  if (!session || session.expiresAt <= new Date()) return null;
+  const membership = session.user.memberships.find(({ tenant }) => !tenant.suspendedAt);
+  return membership ? { userId: session.userId, userName: session.user.name, tenantId: membership.tenantId, tenantName: membership.tenant.name, role: membership.role as Role } : null;
+}
+
+export async function endSession(token: string | undefined) { if (token) await prisma.session.deleteMany({ where: { tokenHash: hashToken(token) } }); }
 
 export async function onboard(input: unknown) { const data = registration.parse(input); const existing = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() } }); if (existing) throw new Error("Cette adresse email est déjà utilisée"); return prisma.$transaction(async (tx) => { const tenant = await tx.tenant.create({ data: { name: data.companyName } }); const user = await tx.user.create({ data: { name: data.name, email: data.email.toLowerCase(), passwordHash: await hashPassword(data.password) } }); await tx.membership.create({ data: { tenantId: tenant.id, userId: user.id, role: MembershipRole.OWNER } }); return { tenantId: tenant.id, userId: user.id }; }); }
 export async function startSession(input: unknown) { const data = login.parse(input); const user = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() }, include: { memberships: { include: { tenant: true } } } }); if (!user || !(await verifyPassword(data.password, user.passwordHash))) throw new Error("Identifiants invalides"); const tenant = user.memberships.find((membership) => !membership.tenant.suspendedAt); if (!tenant) throw new Error("Aucune entreprise active"); const rawToken = randomBytes(32).toString("base64url"); await prisma.session.create({ data: { userId: user.id, tokenHash: hashToken(rawToken), expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14) } }); return { token: rawToken, tenantId: tenant.tenantId, role: tenant.role }; }

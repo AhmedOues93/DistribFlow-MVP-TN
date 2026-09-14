@@ -1,0 +1,2 @@
+import { NextRequest, NextResponse } from "next/server"; import { setUnitActive } from "@/lib/services/catalog"; import { requireRequestContext } from "@/lib/services/auth";
+export async function POST(request:NextRequest,{params}:{params:Promise<{unitId:string}>}){try{return NextResponse.json(await setUnitActive((await params).unitId,true,await requireRequestContext(request)))}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Erreur"},{status:400})}}

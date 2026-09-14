@@ -48,6 +48,7 @@ enum LedgerType {
 model Tenant {
   id            String            @id @default(cuid())
   name          String
+  description   String?
   taxIdentifier String?           @unique
   currency      String            @default("TND")
   timezone      String            @default("Africa/Tunis")
@@ -158,12 +159,14 @@ model Product {
   orderItems    SalesOrderItem[]
 
   @@unique([tenantId, sku])
+  @@unique([tenantId, barcode])
 }
 
 model ProductCategory {
   id       String    @id @default(cuid())
   tenantId String
   name     String
+  active   Boolean   @default(true)
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   products Product[]
 
@@ -171,11 +174,12 @@ model ProductCategory {
 }
 
 model Unit {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   tenantId String
   name     String
   symbol   String
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  active   Boolean @default(true)
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, symbol])
 }

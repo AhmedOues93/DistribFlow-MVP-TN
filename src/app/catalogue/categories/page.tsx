@@ -1,0 +1,1 @@
+import { ProtectedPage } from "@/components/protected-page";import CatalogueClient from "../catalogue-client";export default function Page(){return <ProtectedPage><CatalogueClient kind="categories" title="Catégories"/></ProtectedPage>}

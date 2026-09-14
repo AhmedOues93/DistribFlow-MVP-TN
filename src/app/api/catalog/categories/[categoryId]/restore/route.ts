@@ -1,0 +1,2 @@
+import { NextRequest, NextResponse } from "next/server"; import { setCategoryActive } from "@/lib/services/catalog"; import { requireRequestContext } from "@/lib/services/auth";
+export async function POST(request:NextRequest,{params}:{params:Promise<{categoryId:string}>}){try{return NextResponse.json(await setCategoryActive((await params).categoryId,true,await requireRequestContext(request)))}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Erreur"},{status:400})}}

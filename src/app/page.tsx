@@ -4,5 +4,5 @@ import { getSessionContext } from "@/lib/services/auth";
 
 export default async function Home() {
   const session = await getSessionContext((await cookies()).get("distribflow_session")?.value);
-  redirect(session ? "/clients" : "/connexion");
+  redirect(session ? "/dashboard" : "/connexion");
 }

@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from "next/server"; import { setUnitActive, updateUnit } from "@/lib/services/catalog"; import { requireRequestContext } from "@/lib/services/auth";
+const respond=(error:unknown)=>NextResponse.json({error:error instanceof Error?error.message:"Erreur"},{status:400});
+export async function PATCH(request:NextRequest,{params}:{params:Promise<{unitId:string}>}){try{return NextResponse.json(await updateUnit((await params).unitId,await request.json(),await requireRequestContext(request)))}catch(error){return respond(error)}}
+export async function DELETE(request:NextRequest,{params}:{params:Promise<{unitId:string}>}){try{return NextResponse.json(await setUnitActive((await params).unitId,false,await requireRequestContext(request)))}catch(error){return respond(error)}}

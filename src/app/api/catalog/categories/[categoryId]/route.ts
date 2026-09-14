@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from "next/server"; import { setCategoryActive, updateCategory } from "@/lib/services/catalog"; import { requireRequestContext } from "@/lib/services/auth";
+const respond=(error:unknown)=>NextResponse.json({error:error instanceof Error?error.message:"Erreur"},{status:400});
+export async function PATCH(request:NextRequest,{params}:{params:Promise<{categoryId:string}>}){try{return NextResponse.json(await updateCategory((await params).categoryId,await request.json(),await requireRequestContext(request)))}catch(error){return respond(error)}}
+export async function DELETE(request:NextRequest,{params}:{params:Promise<{categoryId:string}>}){try{return NextResponse.json(await setCategoryActive((await params).categoryId,false,await requireRequestContext(request)))}catch(error){return respond(error)}}
