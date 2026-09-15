@@ -1,0 +1,2 @@
+import { ProtectedPage } from "@/components/protected-page";
+export default function Page(){return <ProtectedPage><main className="content"><div className="page-heading"><div><p className="eyebrow">Stock</p><h1>Transferts</h1><p>Effectuez les transferts depuis les opérations de stock avec une clé d’idempotence.</p></div></div><section className="panel empty-state"><strong>Choisissez un produit et deux entrepôts</strong><p>Le formulaire d’opération de stock est la prochaine étape de cette interface.</p></section></main></ProtectedPage>}
