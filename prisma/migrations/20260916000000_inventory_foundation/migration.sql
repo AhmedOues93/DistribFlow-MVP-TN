@@ -1,0 +1,11 @@
+ALTER TABLE "Warehouse" ADD COLUMN "code" TEXT NOT NULL DEFAULT '', ADD COLUMN "address" TEXT, ADD COLUMN "city" TEXT, ADD COLUMN "contactName" TEXT, ADD COLUMN "contactPhone" TEXT, ADD COLUMN "active" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "StockMovement" ADD COLUMN "notes" TEXT, ADD COLUMN "idempotencyKey" TEXT, ADD COLUMN "transferId" TEXT;
+CREATE UNIQUE INDEX "Warehouse_tenantId_code_key" ON "Warehouse"("tenantId", "code");
+CREATE INDEX "Warehouse_tenantId_active_name_idx" ON "Warehouse"("tenantId", "active", "name");
+CREATE UNIQUE INDEX "StockMovement_warehouseId_idempotencyKey_key" ON "StockMovement"("warehouseId", "idempotencyKey");
+CREATE INDEX "StockMovement_productId_warehouseId_createdAt_idx" ON "StockMovement"("productId", "warehouseId", "createdAt");
+CREATE TABLE "AuditEvent" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "actorId" TEXT NOT NULL, "action" TEXT NOT NULL, "entity" TEXT NOT NULL, "entityId" TEXT NOT NULL, "metadata" JSONB, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "AuditEvent_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "ImportBatch" ("id" TEXT NOT NULL, "tenantId" TEXT NOT NULL, "kind" TEXT NOT NULL, "createdById" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "ImportBatch_pkey" PRIMARY KEY ("id"));
+CREATE INDEX "AuditEvent_tenantId_createdAt_idx" ON "AuditEvent"("tenantId", "createdAt");
+ALTER TABLE "AuditEvent" ADD CONSTRAINT "AuditEvent_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;
+ALTER TABLE "ImportBatch" ADD CONSTRAINT "ImportBatch_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE;

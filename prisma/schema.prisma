@@ -48,7 +48,6 @@ enum LedgerType {
 model Tenant {
   id            String            @id @default(cuid())
   name          String
-  description   String?
   taxIdentifier String?           @unique
   currency      String            @default("TND")
   timezone      String            @default("Africa/Tunis")
@@ -61,6 +60,8 @@ model Tenant {
   invitations   Invitation[]
   categories    ProductCategory[]
   units         Unit[]
+  auditEvents   AuditEvent[]
+  importBatches ImportBatch[]
   suspendedAt   DateTime?
 }
 
@@ -144,6 +145,7 @@ model Product {
   tenantId      String
   sku           String
   name          String
+  description   String?
   unit          String           @default("Pièce")
   categoryId    String?
   barcode       String?
@@ -185,12 +187,21 @@ model Unit {
 }
 
 model Warehouse {
-  id          String          @id @default(cuid())
-  tenantId    String
-  name        String
-  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  stockLevels StockLevel[]
-  movements   StockMovement[]
+  id           String          @id @default(cuid())
+  tenantId     String
+  code         String
+  name         String
+  address      String?
+  city         String?
+  contactName  String?
+  contactPhone String?
+  active       Boolean         @default(true)
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stockLevels  StockLevel[]
+  movements    StockMovement[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, active, name])
 }
 
 model StockLevel {
@@ -205,16 +216,45 @@ model StockLevel {
 }
 
 model StockMovement {
-  id          String       @id @default(cuid())
-  warehouseId String
-  productId   String
-  type        MovementType
-  quantity    Decimal
-  createdAt   DateTime     @default(now())
+  id             String       @id @default(cuid())
+  warehouseId    String
+  productId      String
+  type           MovementType
+  quantity       Decimal
+  createdAt      DateTime     @default(now())
+  createdById    String
+  reference      String?
+  notes          String?
+  idempotencyKey String?
+  transferId     String?
+  warehouse      Warehouse    @relation(fields: [warehouseId], references: [id])
+  product        Product      @relation(fields: [productId], references: [id])
+
+  @@unique([warehouseId, idempotencyKey])
+  @@index([productId, warehouseId, createdAt])
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  tenantId  String
+  actorId   String
+  action    String
+  entity    String
+  entityId  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+}
+
+model ImportBatch {
+  id          String   @id @default(cuid())
+  tenantId    String
+  kind        String
   createdById String
-  reference   String?
-  warehouse   Warehouse    @relation(fields: [warehouseId], references: [id])
-  product     Product      @relation(fields: [productId], references: [id])
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model SalesOrder {
