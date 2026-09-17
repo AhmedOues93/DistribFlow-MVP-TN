@@ -1,0 +1,2 @@
+CREATE TYPE "OrderSource" AS ENUM ('MANUAL', 'WHATSAPP');
+ALTER TABLE "SalesOrder" ADD COLUMN "source" "OrderSource" NOT NULL DEFAULT 'MANUAL';

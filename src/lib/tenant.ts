@@ -2,7 +2,7 @@ export type Role = "PLATFORM_ADMIN" | "OWNER" | "SALES_AGENT" | "WAREHOUSE_MANAG
 
 const permissions: Record<Role, readonly string[]> = {
   PLATFORM_ADMIN: ["*"], OWNER: ["*"], SALES_AGENT: ["customers:read", "customers:write", "orders:read", "orders:write"],
-  WAREHOUSE_MANAGER: ["stock:read", "stock:write", "orders:read"], DRIVER: ["deliveries:read", "deliveries:write"],
+  WAREHOUSE_MANAGER: ["stock:read", "stock:write", "orders:read", "orders:prepare"], DRIVER: ["deliveries:read", "deliveries:write"],
   ACCOUNTANT: ["customers:read", "ledger:read", "ledger:write", "orders:read"], VIEWER: ["customers:read", "orders:read", "stock:read", "ledger:read"]
 };
 

@@ -20,12 +20,19 @@ enum MembershipRole {
 enum OrderStatus {
   DRAFT
   CONFIRMED
+  IN_PREPARATION
   PREPARED
+  READY_FOR_DELIVERY
   OUT_FOR_DELIVERY
   DELIVERED
   PARTIALLY_DELIVERED
   CANCELLED
   RETURNED
+}
+
+enum OrderSource {
+  MANUAL
+  WHATSAPP
 }
 
 enum MovementType {
@@ -46,23 +53,25 @@ enum LedgerType {
 }
 
 model Tenant {
-  id            String            @id @default(cuid())
-  name          String
-  taxIdentifier String?           @unique
-  currency      String            @default("TND")
-  timezone      String            @default("Africa/Tunis")
-  createdAt     DateTime          @default(now())
-  memberships   Membership[]
-  customers     Customer[]
-  products      Product[]
-  warehouses    Warehouse[]
-  orders        SalesOrder[]
-  invitations   Invitation[]
-  categories    ProductCategory[]
-  units         Unit[]
-  auditEvents   AuditEvent[]
-  importBatches ImportBatch[]
-  suspendedAt   DateTime?
+  id             String             @id @default(cuid())
+  name           String
+  taxIdentifier  String?            @unique
+  currency       String             @default("TND")
+  timezone       String             @default("Africa/Tunis")
+  createdAt      DateTime           @default(now())
+  memberships    Membership[]
+  customers      Customer[]
+  products       Product[]
+  warehouses     Warehouse[]
+  orders         SalesOrder[]
+  invitations    Invitation[]
+  categories     ProductCategory[]
+  units          Unit[]
+  auditEvents    AuditEvent[]
+  importBatches  ImportBatch[]
+  orderSequences OrderSequence[]
+  reservations   OrderReservation[]
+  suspendedAt    DateTime?
 }
 
 model User {
@@ -141,24 +150,25 @@ model CustomerAddress {
 }
 
 model Product {
-  id            String           @id @default(cuid())
-  tenantId      String
-  sku           String
-  name          String
-  description   String?
-  unit          String           @default("Pièce")
-  categoryId    String?
-  barcode       String?
-  purchasePrice Decimal          @default(0)
-  sellingPrice  Decimal
-  taxRate       Decimal          @default(19)
-  minimumStock  Decimal          @default(0)
-  active        Boolean          @default(true)
-  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category      ProductCategory? @relation(fields: [categoryId], references: [id])
-  stockLevels   StockLevel[]
-  movements     StockMovement[]
-  orderItems    SalesOrderItem[]
+  id                String             @id @default(cuid())
+  tenantId          String
+  sku               String
+  name              String
+  description       String?
+  unit              String             @default("Pièce")
+  categoryId        String?
+  barcode           String?
+  purchasePrice     Decimal            @default(0)
+  sellingPrice      Decimal
+  taxRate           Decimal            @default(19)
+  minimumStock      Decimal            @default(0)
+  active            Boolean            @default(true)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category          ProductCategory?   @relation(fields: [categoryId], references: [id])
+  stockLevels       StockLevel[]
+  movements         StockMovement[]
+  orderItems        SalesOrderItem[]
+  orderReservations OrderReservation[]
 
   @@unique([tenantId, sku])
   @@unique([tenantId, barcode])
@@ -187,18 +197,20 @@ model Unit {
 }
 
 model Warehouse {
-  id           String          @id @default(cuid())
-  tenantId     String
-  code         String
-  name         String
-  address      String?
-  city         String?
-  contactName  String?
-  contactPhone String?
-  active       Boolean         @default(true)
-  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  stockLevels  StockLevel[]
-  movements    StockMovement[]
+  id                String             @id @default(cuid())
+  tenantId          String
+  code              String
+  name              String
+  address           String?
+  city              String?
+  contactName       String?
+  contactPhone      String?
+  active            Boolean            @default(true)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stockLevels       StockLevel[]
+  movements         StockMovement[]
+  orders            SalesOrder[]
+  orderReservations OrderReservation[]
 
   @@unique([tenantId, code])
   @@index([tenantId, active, name])
@@ -258,30 +270,115 @@ model ImportBatch {
 }
 
 model SalesOrder {
-  id            String           @id @default(cuid())
-  tenantId      String
-  customerId    String
-  number        String
-  status        OrderStatus      @default(DRAFT)
-  requestedDate DateTime?
-  total         Decimal          @default(0)
-  createdAt     DateTime         @default(now())
-  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer      Customer         @relation(fields: [customerId], references: [id])
-  items         SalesOrderItem[]
+  id                String               @id @default(cuid())
+  tenantId          String
+  customerId        String
+  warehouseId       String?
+  number            String
+  source            OrderSource          @default(MANUAL)
+  status            OrderStatus          @default(DRAFT)
+  orderDate         DateTime             @default(now())
+  requestedDate     DateTime?
+  customerReference String?
+  notes             String?
+  subtotal          Decimal              @default(0)
+  discount          Decimal              @default(0)
+  tax               Decimal              @default(0)
+  total             Decimal              @default(0)
+  createdById       String?
+  confirmedById     String?
+  confirmedAt       DateTime?
+  preparedById      String?
+  preparedAt        DateTime?
+  cancelledById     String?
+  cancelledAt       DateTime?
+  cancelReason      String?
+  archivedAt        DateTime?
+  version           Int                  @default(0)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  tenant            Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer          Customer             @relation(fields: [customerId], references: [id])
+  warehouse         Warehouse?           @relation(fields: [warehouseId], references: [id])
+  items             SalesOrderItem[]
+  statusHistory     OrderStatusHistory[]
+  reservations      OrderReservation[]
+  preparation       OrderPreparation?
 
   @@unique([tenantId, number])
+  @@index([tenantId, status, orderDate])
+  @@index([tenantId, warehouseId, requestedDate])
 }
 
 model SalesOrderItem {
-  id        String     @id @default(cuid())
-  orderId   String
-  productId String
-  quantity  Decimal
-  unitPrice Decimal
-  taxRate   Decimal
-  order     SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product    @relation(fields: [productId], references: [id])
+  id                  String     @id @default(cuid())
+  orderId             String
+  productId           String
+  descriptionSnapshot String?
+  skuSnapshot         String     @default("")
+  unitSnapshot        String     @default("")
+  quantity            Decimal
+  preparedQuantity    Decimal    @default(0)
+  unitPrice           Decimal
+  discount            Decimal    @default(0)
+  taxRate             Decimal
+  lineSubtotal        Decimal    @default(0)
+  lineTotal           Decimal    @default(0)
+  order               SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product             Product    @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+}
+
+model OrderSequence {
+  tenantId   String   @id
+  nextNumber Int      @default(1)
+  updatedAt  DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model OrderStatusHistory {
+  id             String       @id @default(cuid())
+  orderId        String
+  fromStatus     OrderStatus?
+  toStatus       OrderStatus
+  actorId        String
+  idempotencyKey String?
+  note           String?
+  createdAt      DateTime     @default(now())
+  order          SalesOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, idempotencyKey])
+  @@index([orderId, createdAt])
+}
+
+model OrderReservation {
+  id               String     @id @default(cuid())
+  tenantId         String
+  orderId          String
+  productId        String
+  warehouseId      String
+  quantity         Decimal
+  consumedQuantity Decimal    @default(0)
+  releasedAt       DateTime?
+  consumedAt       DateTime?
+  createdAt        DateTime   @default(now())
+  tenant           Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order            SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product          Product    @relation(fields: [productId], references: [id])
+  warehouse        Warehouse  @relation(fields: [warehouseId], references: [id])
+
+  @@unique([orderId, productId, warehouseId])
+  @@index([tenantId, warehouseId, productId, releasedAt, consumedAt])
+}
+
+model OrderPreparation {
+  id          String     @id @default(cuid())
+  orderId     String     @unique
+  startedById String
+  startedAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  order       SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model CustomerLedgerEntry {

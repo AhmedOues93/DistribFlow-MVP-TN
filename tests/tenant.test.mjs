@@ -4,6 +4,6 @@ import { readFile } from "node:fs/promises";
 
 test("order service scopes customer and products to the tenant", async () => {
   const source = await readFile("src/lib/services/orders.ts", "utf8");
-  assert.match(source, /findFirst\(\{ where: \{ id: data\.customerId, tenantId \} \}\)/);
-  assert.match(source, /where: \{ tenantId, id:/);
+  assert.match(source, /customer\.findFirst\(\{ where: \{ id: data\.customerId, tenantId, active: true \} \}\)/);
+  assert.match(source, /product\.findMany\(\{ where: \{ tenantId, active: true/);
 });

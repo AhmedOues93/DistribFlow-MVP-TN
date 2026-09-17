@@ -29,6 +29,20 @@ Chaque ligne est validée, les doublons du fichier et de l’entreprise sont ref
 
 Les migrations versionnées sont la seule procédure de création ou d'évolution du schéma. Sur une nouvelle base, exécutez `npx prisma migrate deploy`, `npx prisma generate`, puis `npm run db:seed`. Vérifiez ensuite l'état avec `npx prisma migrate status`.
 
+Pour vérifier le flux Phase 3 contre PostgreSQL : `npm run db:smoke`. Le smoke crée des commandes de test dans le tenant de démonstration et vérifie les lignes, la numérotation, l’idempotence, les réservations, la consommation physique, l’audit, la duplication et l’annulation.
+
 ## Feuille de route
 
-La Phase 3 couvrira les commandes et la préparation en entrepôt. La Phase 4 couvrira une application web/PWA terrain, mobile-first et hors-ligne pour commerciaux, magasiniers et livreurs, avec écrans par rôle, synchronisation sécurisée et le même backend tenant-safe.
+## Commandes et préparation
+
+La Phase 3 ajoute `/commandes`, `/commandes/nouvelle`, `/commandes/[orderId]`, `/commandes/[orderId]/modifier`, `/preparation` et `/preparation/[orderId]`. Le cycle géré est `DRAFT` (Brouillon) → `CONFIRMED` (Confirmée) → `IN_PREPARATION` (En préparation) → `PREPARED` (Préparée) → `READY_FOR_DELIVERY` (Prête à livrer). `READY_FOR_DELIVERY` est l’état de sortie du poste de préparation ; les états livraison/retour du modèle restent réservés à une phase ultérieure. L’annulation est autorisée depuis brouillon ou confirmation, exige un motif et libère les réservations.
+
+Les numéros sont générés côté serveur au format `CMD-AAAA-000001` au moyen d’un compteur atomique par tenant et transaction. Les montants sont calculés avec `Prisma.Decimal` (jamais avec des flottants JavaScript) et arrondis au millième TND avec l’arrondi demi supérieur côté serveur. Les prix, taxes, SKU, unité et description sont figés dans les lignes ; modifier un produit ne modifie donc pas une commande existante.
+
+La source est `MANUAL` (Manuelle) ou `WHATSAPP` (WhatsApp). La confirmation réserve le stock physique disponible de l’entrepôt sélectionné ; les brouillons ne réservent rien. L’écran de saisie affiche physique, réservé et disponible. La préparation consomme progressivement les réservations à travers des mouvements `SALE` immuables, uniquement pour le delta préparé. Les sorties de stock ordinaires ne peuvent pas utiliser une quantité réservée. Les modifications concurrentes utilisent `version` et les transitions acceptent une clé d’idempotence.
+
+La liste des commandes conserve recherche, statut, entrepôt, dates et page dans l’URL. Le détail expose le cycle de vie et les événements d’audit avec acteur et date, propose une impression du résumé, une duplication vers un nouveau brouillon et un lien `https://wa.me` validé après confirmation explicite. Les motifs d’annulation sont obligatoires ; les changements non enregistrés sont signalés avant fermeture ou navigation interne.
+
+## Feuille de route
+
+La Phase 4 couvrira une application web/PWA terrain, mobile-first et hors-ligne pour commerciaux, magasiniers et livreurs, avec écrans par rôle et synchronisation sécurisée. La Phase 5 couvrira la synchronisation hors-ligne, les tournées, preuves de livraison, encaissements et retours.
