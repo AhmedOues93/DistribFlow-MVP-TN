@@ -1,2 +1,4 @@
 import { ProtectedPage } from "@/components/protected-page";
-export default function DashboardPage(){return <ProtectedPage><main className="content"><div className="page-heading"><div><p className="eyebrow">Vue d’ensemble</p><h1>Tableau de bord</h1><p>Votre activité apparaîtra ici lorsque des commandes, livraisons et encaissements seront enregistrés.</p></div></div><section className="panel empty-state"><strong>Aucune donnée à afficher</strong><p>Commencez par créer vos clients et votre catalogue.</p></section></main></ProtectedPage>}
+import DashboardClient from "./dashboard-client";
+
+export default function DashboardPage() { return <ProtectedPage><DashboardClient /></ProtectedPage>; }

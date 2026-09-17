@@ -43,6 +43,12 @@ La source est `MANUAL` (Manuelle) ou `WHATSAPP` (WhatsApp). La confirmation rés
 
 La liste des commandes conserve recherche, statut, entrepôt, dates et page dans l’URL. Le détail expose le cycle de vie et les événements d’audit avec acteur et date, propose une impression du résumé, une duplication vers un nouveau brouillon et un lien `https://wa.me` validé après confirmation explicite. Les motifs d’annulation sont obligatoires ; les changements non enregistrés sont signalés avant fermeture ou navigation interne.
 
+## Système d’interface et contrôle manuel
+
+Le shell authentifié, les écrans métier, les formulaires, tables, dialogues, états vides et erreurs partagent le système de tokens centralisé dans `src/app/globals.css`. La palette de production est bleu nuit, bleu royal, bleu électrique et cyan discret, avec des panneaux bleu-gris, des ombres légères et une navigation mobile accessible. La connexion et l’inscription utilisent l’illustration logistique `public/distribflow-logistics.png` sans modifier le mécanisme de session.
+
+Le contrôle manuel couvre chaque route métier aux largeurs mobile (390 px), tablette et bureau : navigation, recherche, filtres, pagination, formulaires, confirmations, impression, chargements, résultats vides et erreurs serveur. Les données du tableau de bord proviennent exclusivement de PostgreSQL et restent filtrées par tenant et permissions ; aucune statistique métier n’est simulée. Les transitions respectent `prefers-reduced-motion` et les actions principales gardent une cible tactile d’au moins 44 px.
+
 ## Feuille de route
 
 La Phase 4 couvrira une application web/PWA terrain, mobile-first et hors-ligne pour commerciaux, magasiniers et livreurs, avec écrans par rôle et synchronisation sécurisée. La Phase 5 couvrira la synchronisation hors-ligne, les tournées, preuves de livraison, encaissements et retours.

@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ImportPanel } from "@/components/import-panel";
+import { useRole } from "@/components/app-shell";
 
 type Address = { label: string; address: string; isDefault: boolean };
 type Customer = { id: string; name: string; phone: string | null; whatsapp: string | null; taxIdentifier: string | null; creditLimit: string; paymentTermsDays: number; notes: string | null; active: boolean; addresses: Address[] };
@@ -10,7 +11,8 @@ type FormValues = { name: string; phone: string; whatsapp: string; taxIdentifier
 const emptyForm = (): FormValues => ({ name: "", phone: "", whatsapp: "", taxIdentifier: "", creditLimit: "0", paymentTermsDays: "0", notes: "", addresses: [] });
 const canWrite = (role: string) => ["OWNER", "SALES_AGENT", "PLATFORM_ADMIN"].includes(role);
 
-export default function CustomersClient({ role }: { role: string }) {
+export default function CustomersClient() {
+  const role = useRole();
   const writable = canWrite(role);
   const [data, setData] = useState<CustomerResponse | null>(null);
   const [query, setQuery] = useState("");
