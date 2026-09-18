@@ -31,3 +31,10 @@
 26. Avec deux propriétaires, suspendre ou rétrograder l’un ; avec un seul propriétaire, vérifier le refus de suspendre, archiver ou rétrograder le dernier.
 27. Comme ADMIN, vérifier la gestion des employés mais le refus de modifier un OWNER ou d’attribuer OWNER. Vérifier qu’un membre suspendu ou archivé ne peut plus ouvrir le tenant.
 28. Vérifier le sélecteur d’entreprise pour un utilisateur multi-tenant et l’absence d’accès aux données de l’entreprise non sélectionnée.
+
+## Recherche, identité et responsive
+
+29. Depuis le shell authentifié, rechercher au moins un client, produit et numéro de commande : vérifier le debounce, les groupes, les flèches, Entrée, Échap, le message vide et l’erreur sans fuite de tenant. Vérifier qu’un résultat client ou produit restaure le filtre `q` dans son URL.
+30. Dans `/parametres/entreprise`, modifier le nom, importer un PNG/JPEG/WebP de moins de 2 Mo, vérifier l’aperçu, le logo du shell et le résumé imprimable. Vérifier le refus d’un SVG, d’un contenu dont l’extension ment et d’un fichier trop volumineux ; retirer ensuite le logo et confirmer le fallback par initiales.
+31. Sur `/connexion`, `/dashboard`, `/clients`, `/catalogue/produits`, `/commandes`, `/equipe`, `/parametres/entreprise`, `/invitation/[token]` et `/espace-employe`, inspecter 1440 px, 1024 px et 390 px : drawer mobile, navigation complète scrollable, focus clavier, aucune coupure ni débordement horizontal.
+32. Dans un navigateur sur le port réel de développement, inviter un employé, vérifier que le lien est un ancre cliquable sur la même origine et que « Ouvrir le lien » et « Copier le lien » donnent un retour de succès. Ouvrir le lien dans une fenêtre privée, accepter l’invitation puis se connecter avec la redirection du rôle.

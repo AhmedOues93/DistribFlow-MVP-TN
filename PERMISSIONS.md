@@ -21,6 +21,8 @@ Les contrôles sont appliqués dans le service et non uniquement dans l'interfac
 
 Les contrôles d’interface masquent les mutations incompatibles, mais chaque service les réévalue côté serveur. Les routes de lecture de la file de préparation restent tenant-scoped ; les routes de démarrage et d’enregistrement exigent `orders:prepare`.
 
+La recherche globale est disponible uniquement pour les ressources lisibles par le rôle courant : clients, produits et commandes sont interrogés séparément avec le tenant actif. Les résultats clients et produits renvoient vers leurs listes filtrées par `q`; les commandes ouvrent leur détail tenant-scoped.
+
 ## Équipe
 
 | Rôle | Gestion de l’équipe | Accès opérationnel |
@@ -33,3 +35,5 @@ Les contrôles d’interface masquent les mutations incompatibles, mais chaque s
 | Read only | Aucun accès équipe | Lectures autorisées uniquement |
 
 ADMIN ne peut pas modifier un OWNER ni promouvoir un membre au rôle OWNER. Le dernier OWNER actif ne peut pas être suspendu, archivé ou rétrogradé. Les anciens rôles `SALES_AGENT`, `WAREHOUSE_MANAGER`, `VIEWER` et `ACCOUNTANT` restent compatibles avec les permissions historiques.
+
+La configuration d’entreprise (`/parametres/entreprise`) est réservée à OWNER et ADMIN. La lecture de logo est contrôlée par session et son écriture, remplacement ou retrait est refusé aux autres rôles.

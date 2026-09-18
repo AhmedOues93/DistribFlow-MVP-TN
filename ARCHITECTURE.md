@@ -29,3 +29,9 @@ Les mises à jour de brouillon remplacent atomiquement l’ensemble des lignes a
 `src/lib/services/bootstrap.ts` installe les unités, catégories et l’entrepôt standard par `upsert` dans la transaction d’inscription. Le même service est appelé par l’action propriétaire de `/parametres/profil` et par le seed de développement ; il ne crée pas de données commerciales.
 
 `src/lib/services/team.ts` gère les memberships tenant-scoped et leurs statuts. Les invitations créent un compte sans mot de passe utilisable jusqu’à l’acceptation, conservent uniquement le hash du token et écrivent les événements d’audit. L’acceptation est transactionnelle et crée ou active le membership. `src/lib/services/email.ts` isole la livraison email et son modèle français. Les sessions portent l’entreprise active afin que `/api/auth/switch-company` vérifie à chaque changement l’appartenance active de l’utilisateur.
+
+## Recherche et identité visuelle
+
+`src/lib/services/search.ts` fournit une recherche globale debouncée sur les clients, produits et commandes. Chaque requête est limitée au tenant de session et aux permissions de lecture correspondantes ; les résultats ouvrent une fiche ou une liste filtrée par URL. Le shell conserve les états chargement, vide et erreur et prend en charge les flèches, Entrée et Échap.
+
+`src/lib/services/branding.ts` conserve uniquement les métadonnées sûres du logo (`objectKey`, type, taille et date) dans `Tenant`. `src/lib/storage.ts` abstrait un stockage local hors dépôt pour le développement et un stockage S3-compatible signé pour la production. L’accès au logo passe par une route contrôlée par session, et la validation vérifie les octets PNG/JPEG/WebP, la taille maximale de 2 Mo et l’appartenance au tenant.

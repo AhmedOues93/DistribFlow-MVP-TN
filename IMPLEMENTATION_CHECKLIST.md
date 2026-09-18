@@ -13,6 +13,7 @@
 | Phase 3 — commandes et préparation | Terminé | Commandes tenant-scoped, numérotation atomique, totaux Decimal, snapshots, réservations, préparation, audit, source manuelle/WhatsApp, UI responsive, tests ciblés et migrations additives. |
 | Phase 5 — tournées, POD, encaissements et retours | À venir | Non démarrée. |
 | Équipe et employés | Terminé | `/equipe`, invitations, acceptation, statuts membership, rôles, règles dernier OWNER, audit et espace employé. |
+| Correctif onboarding et identité visuelle | Terminé | Origine d’invitation sécurisée, lien local cliquable, recherche globale tenant-scoped, stockage de marque local/S3, réglages entreprise, shell graphite/ivoire/cuivre, responsive et QA manuel documentés. |
 
 ## Phase livrée — gestion d’équipe
 

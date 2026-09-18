@@ -70,6 +70,10 @@ model Tenant {
   currency       String             @default("TND")
   timezone       String             @default("Africa/Tunis")
   createdAt      DateTime           @default(now())
+  logoObjectKey  String?
+  logoMimeType   String?
+  logoSize       Int?
+  logoUpdatedAt  DateTime?
   memberships    Membership[]
   customers      Customer[]
   products       Product[]

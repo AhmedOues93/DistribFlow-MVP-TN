@@ -17,13 +17,13 @@ async function verifyPassword(password: string, stored: string) { const [salt, e
 
 export type CompanyMembership = { tenantId: string; tenantName: string; role: Role; status: MembershipStatus };
 export type SessionContext = { sessionId: string; tenantId: string; role: Role; userId: string };
-export type SessionDetails = SessionContext & { userName: string; tenantName: string; companies: CompanyMembership[] };
+export type SessionDetails = SessionContext & { userName: string; tenantName: string; tenantLogoUrl?: string; companies: CompanyMembership[] };
 
-function activeCompanies(user: { memberships: Array<{ tenantId: string; role: MembershipRole; status: MembershipStatus; tenant: { id: string; name: string; suspendedAt: Date | null } }> }) {
+function activeCompanies(user: { memberships: Array<{ tenantId: string; role: MembershipRole; status: MembershipStatus; tenant: { id: string; name: string; suspendedAt: Date | null; logoObjectKey: string | null } }> }) {
   return user.memberships.filter((membership) => membership.status === MembershipStatus.ACTIVE && !membership.tenant.suspendedAt).map((membership) => ({ tenantId: membership.tenantId, tenantName: membership.tenant.name, role: membership.role as Role, status: membership.status }));
 }
 
-function selectedCompany(user: { memberships: Array<{ tenantId: string; role: MembershipRole; status: MembershipStatus; tenant: { id: string; name: string; suspendedAt: Date | null } }> }, tenantId?: string) {
+function selectedCompany(user: { memberships: Array<{ tenantId: string; role: MembershipRole; status: MembershipStatus; tenant: { id: string; name: string; suspendedAt: Date | null; logoObjectKey: string | null } }> }, tenantId?: string) {
   const memberships = user.memberships.filter((membership) => membership.status === MembershipStatus.ACTIVE && !membership.tenant.suspendedAt);
   return tenantId ? memberships.find((membership) => membership.tenantId === tenantId) : memberships[0];
 }
@@ -44,7 +44,7 @@ export async function getSessionDetails(token: string | undefined): Promise<Sess
   if (!session || session.expiresAt <= new Date()) return null;
   const membership = selectedCompany(session.user, session.activeTenantId ?? undefined);
   if (!membership) return null;
-  return { sessionId: session.id, userId: session.userId, userName: session.user.name, tenantId: membership.tenantId, tenantName: membership.tenant.name, role: membership.role as Role, companies: activeCompanies(session.user) };
+  return { sessionId: session.id, userId: session.userId, userName: session.user.name, tenantId: membership.tenantId, tenantName: membership.tenant.name, tenantLogoUrl: membership.tenant.logoObjectKey ? "/api/tenant/branding/logo" : undefined, role: membership.role as Role, companies: activeCompanies(session.user) };
 }
 
 export async function endSession(token: string | undefined) { if (token) await prisma.session.deleteMany({ where: { tokenHash: hashToken(token) } }); }

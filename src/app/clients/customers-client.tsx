@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ImportPanel } from "@/components/import-panel";
 import { useRole } from "@/components/app-shell";
 
@@ -13,9 +14,10 @@ const canWrite = (role: string) => ["OWNER", "ADMIN", "SALES", "SALES_AGENT", "P
 
 export default function CustomersClient() {
   const role = useRole();
+  const searchParams = useSearchParams();
   const writable = canWrite(role);
   const [data, setData] = useState<CustomerResponse | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [showArchived, setShowArchived] = useState(false);
   const [page, setPage] = useState(1);
   const [form, setForm] = useState<FormValues | null>(null);

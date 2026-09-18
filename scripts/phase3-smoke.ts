@@ -62,10 +62,10 @@ async function main() {
   const idempotentPreview = await getStarterDataPreview(prisma, employeeTenant.tenantId);
   check(idempotentPreview.units.toAdd === 0 && idempotentPreview.categories.toAdd === 0 && idempotentPreview.warehouse.toAdd === 0, "starter data is idempotent");
   const ownerMembership = await prisma.membership.findFirstOrThrow({ where: { tenantId: employeeTenant.tenantId, role: "OWNER" } });
-  const invitation = await inviteMember({ name: "Commercial Smoke", email: employeeEmail, role: "SALES" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  const invitation = await inviteMember({ name: "Commercial Smoke", email: employeeEmail, role: "SALES" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId, requestOrigin: "http://localhost:3002" });
   check(invitation.invitationUrl?.includes("/invitation/"), "development invitation link returned without exposing a token hash");
   let duplicateInvitationRejected = false;
-  try { await inviteMember({ name: "Commercial Smoke", email: employeeEmail, role: "SALES" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId }); } catch (error) { duplicateInvitationRejected = error instanceof Error && error.message === "Une invitation active existe déjà"; }
+  try { await inviteMember({ name: "Commercial Smoke", email: employeeEmail, role: "SALES" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId, requestOrigin: "http://localhost:3002" }); } catch (error) { duplicateInvitationRejected = error instanceof Error && error.message === "Une invitation active existe déjà"; }
   check(duplicateInvitationRejected, "duplicate active invitation rejected");
   const invitationToken = invitation.invitationUrl?.split("/invitation/")[1];
   check(Boolean(invitationToken), "invitation token is available only in development workflow");
@@ -91,18 +91,18 @@ async function main() {
   check(adminOwnerRejected, "admin cannot modify owner");
   const existingEmail = `phase3-existing-${Date.now()}@example.test`;
   const existingUser = await prisma.user.create({ data: { name: "Utilisateur existant", email: existingEmail, passwordHash: await hashPassword("ExistingPassword!2026"), passwordSet: true } });
-  const existingInvitation = await inviteMember({ name: "Utilisateur existant", email: existingEmail, role: "READ_ONLY" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  const existingInvitation = await inviteMember({ name: "Utilisateur existant", email: existingEmail, role: "READ_ONLY" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId, requestOrigin: "http://localhost:3002" });
   const existingToken = existingInvitation.invitationUrl?.split("/invitation/")[1];
   const existingAccepted = await acceptInvitation(existingToken!, undefined);
   check(existingAccepted.userId === existingUser.id, "existing user acceptance keeps the account");
   const revokedEmail = `phase3-revoked-${Date.now()}@example.test`;
-  const revokedInvitation = await inviteMember({ name: "Invitation révoquée", email: revokedEmail, role: "DRIVER" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  const revokedInvitation = await inviteMember({ name: "Invitation révoquée", email: revokedEmail, role: "DRIVER" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId, requestOrigin: "http://localhost:3002" });
   await revokeInvitation(revokedInvitation.invitationId, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
   let revokedRejected = false;
   try { await acceptInvitation(revokedInvitation.invitationUrl!.split("/invitation/")[1], "RevokedPassword!2026"); } catch (error) { revokedRejected = error instanceof Error && error.message === "Invitation expirée ou invalide"; }
   check(revokedRejected, "revoked invitation cannot be accepted");
   const expiredEmail = `phase3-expired-${Date.now()}@example.test`;
-  const expiredInvitation = await inviteMember({ name: "Invitation expirée", email: expiredEmail, role: "WAREHOUSE" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  const expiredInvitation = await inviteMember({ name: "Invitation expirée", email: expiredEmail, role: "WAREHOUSE" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId, requestOrigin: "http://localhost:3002" });
   await prisma.invitation.update({ where: { id: expiredInvitation.invitationId }, data: { expiresAt: new Date(0) } });
   let expiredRejected = false;
   try { await acceptInvitation(expiredInvitation.invitationUrl!.split("/invitation/")[1], "ExpiredPassword!2026"); } catch (error) { expiredRejected = error instanceof Error && error.message === "Invitation expirée ou invalide"; }

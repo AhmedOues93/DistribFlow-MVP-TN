@@ -1,0 +1,4 @@
+ALTER TABLE "Tenant" ADD COLUMN "logoObjectKey" TEXT;
+ALTER TABLE "Tenant" ADD COLUMN "logoMimeType" TEXT;
+ALTER TABLE "Tenant" ADD COLUMN "logoSize" INTEGER;
+ALTER TABLE "Tenant" ADD COLUMN "logoUpdatedAt" TIMESTAMP(3);

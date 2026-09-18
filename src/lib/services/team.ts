@@ -6,7 +6,7 @@ import { hashPassword, hashToken } from "@/lib/services/auth";
 import { invitationUrl, sendInvitationEmail } from "@/lib/services/email";
 import { assertTenant, can, employeeRoles, isTeamManager, type Role } from "@/lib/tenant";
 
-type Context = { tenantId?: string; role: Role; userId: string };
+type Context = { tenantId?: string; role: Role; userId: string; requestOrigin?: string };
 type MemberStatus = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
 const inviteSchema = z.object({ name: z.string().trim().min(2).max(100), email: z.string().email(), role: z.enum(["ADMIN", "SALES", "WAREHOUSE", "DRIVER", "READ_ONLY"]) });
 const roleSchema = z.object({ role: z.enum(["ADMIN", "SALES", "WAREHOUSE", "DRIVER", "READ_ONLY"]) });
@@ -33,8 +33,8 @@ export async function listInvitations(context: Context) {
   return prisma.invitation.findMany({ where: { tenantId }, select: { id: true, name: true, email: true, role: true, expiresAt: true, acceptedAt: true, revokedAt: true }, orderBy: { expiresAt: "desc" } });
 }
 
-async function deliverInvitation(invitation: { id: string; name: string; email: string; role: MembershipRole; expiresAt: Date }, companyName: string, token: string) {
-  const url = invitationUrl(token);
+async function deliverInvitation(invitation: { id: string; name: string; email: string; role: MembershipRole; expiresAt: Date }, companyName: string, token: string, requestOrigin?: string) {
+  const url = invitationUrl(token, requestOrigin);
   const emailSent = await sendInvitationEmail({ recipientName: invitation.name, recipientEmail: invitation.email, companyName, roleLabel: roleLabels[invitation.role] ?? invitation.role, invitationUrl: url, expiresAt: invitation.expiresAt });
   return { emailSent, invitationUrl: !emailSent && process.env.NODE_ENV !== "production" ? url : undefined };
 }
@@ -61,7 +61,7 @@ export async function inviteMember(input: unknown, context: Context) {
     return invitation;
   });
   const company = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } });
-  return { ...(await deliverInvitation(record, company.name, token)), invitationId: record.id };
+  return { ...(await deliverInvitation(record, company.name, token, context.requestOrigin)), invitationId: record.id };
 }
 
 export async function resendInvitation(invitationId: string, context: Context) {
@@ -71,7 +71,7 @@ export async function resendInvitation(invitationId: string, context: Context) {
   const token = randomToken(); const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
   const record = await prisma.$transaction(async (tx) => { const updated = await tx.invitation.update({ where: { id: current.id }, data: { tokenHash: hashToken(token), expiresAt } }); await tx.auditEvent.create({ data: { tenantId, actorId: context.userId, action: "INVITATION_RESENT", entity: "Invitation", entityId: updated.id } }); return updated; });
   const company = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } });
-  return { ...(await deliverInvitation(record, company.name, token)), invitationId: record.id };
+  return { ...(await deliverInvitation(record, company.name, token, context.requestOrigin)), invitationId: record.id };
 }
 
 export async function revokeInvitation(invitationId: string, context: Context) {

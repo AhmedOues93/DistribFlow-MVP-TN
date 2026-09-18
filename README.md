@@ -12,7 +12,7 @@ Les services applicatifs effectuent les contrôles de rôle, de tenant et de val
 
 ## Routes applicatives
 
-Après inscription ou connexion, l’application utilise le shell authentifié. Les routes disponibles sont `/dashboard`, `/clients`, `/catalogue/produits`, `/catalogue/categories`, `/catalogue/unites`, `/entrepots`, `/stock`, `/stock/mouvements`, `/stock/transferts`, `/stock/alertes`, `/parametres/profil`, `/equipe`, `/equipe/invitations`, `/equipe/[membershipId]` et `/espace-employe`. Les invitations sont acceptées sur `/invitation/[token]`.
+Après inscription ou connexion, l’application utilise le shell authentifié. Les routes disponibles sont `/dashboard`, `/clients`, `/catalogue/produits`, `/catalogue/categories`, `/catalogue/unites`, `/entrepots`, `/stock`, `/stock/mouvements`, `/stock/transferts`, `/stock/alertes`, `/parametres/profil`, `/parametres/entreprise`, `/equipe`, `/equipe/invitations`, `/equipe/[membershipId]` et `/espace-employe`. Les invitations sont acceptées sur `/invitation/[token]`.
 
 Les clients, catégories, unités, produits et entrepôts sont recherchables, archivables et restaurables dans leur entreprise. Les produits, mouvements et niveaux de stock sont exclusivement lus depuis PostgreSQL.
 
@@ -45,7 +45,7 @@ La liste des commandes conserve recherche, statut, entrepôt, dates et page dans
 
 ## Système d’interface et contrôle manuel
 
-Le shell authentifié, les écrans métier, les formulaires, tables, dialogues, états vides et erreurs partagent le système de tokens centralisé dans `src/app/globals.css`. La palette de production est bleu nuit, bleu royal, bleu électrique et cyan discret, avec des panneaux bleu-gris, des ombres légères et une navigation mobile accessible. La connexion et l’inscription utilisent l’illustration logistique `public/distribflow-logistics.png` sans modifier le mécanisme de session.
+Le shell authentifié, les écrans métier, les formulaires, tables, dialogues, états vides et erreurs partagent le système de tokens centralisé dans `src/app/globals.css`. La palette de production est graphite, ivoire, sable et cuivre terracotta, avec des accents sémantiques sobres et une navigation mobile accessible. La connexion et l’inscription utilisent l’illustration logistique `public/distribflow-logistics.png` sans modifier le mécanisme de session.
 
 Le contrôle manuel couvre chaque route métier aux largeurs mobile (390 px), tablette et bureau : navigation, recherche, filtres, pagination, formulaires, confirmations, impression, chargements, résultats vides et erreurs serveur. Les données du tableau de bord proviennent exclusivement de PostgreSQL et restent filtrées par tenant et permissions ; aucune statistique métier n’est simulée. Les transitions respectent `prefers-reduced-motion` et les actions principales gardent une cible tactile d’au moins 44 px.
 
