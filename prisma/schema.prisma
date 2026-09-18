@@ -10,11 +10,22 @@ datasource db {
 enum MembershipRole {
   PLATFORM_ADMIN
   OWNER
+  ADMIN
+  SALES
+  WAREHOUSE
   SALES_AGENT
   WAREHOUSE_MANAGER
   DRIVER
   ACCOUNTANT
   VIEWER
+  READ_ONLY
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
 }
 
 enum OrderStatus {
@@ -81,40 +92,53 @@ model User {
   memberships  Membership[]
   createdAt    DateTime     @default(now())
   passwordHash String
+  passwordSet  Boolean      @default(true)
   sessions     Session[]
 }
 
 model Membership {
-  id       String         @id @default(cuid())
-  tenantId String
-  userId   String
-  role     MembershipRole
-  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String           @id @default(cuid())
+  tenantId    String
+  userId      String
+  role        MembershipRole
+  status      MembershipStatus @default(ACTIVE)
+  invitedAt   DateTime?
+  activatedAt DateTime?
+  suspendedAt DateTime?
+  archivedAt  DateTime?
+  updatedAt   DateTime         @updatedAt
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, userId])
+  @@index([tenantId, status, role])
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
-  userId    String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  tokenHash      String   @unique
+  userId         String
+  activeTenantId String?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Invitation {
-  id         String         @id @default(cuid())
-  tenantId   String
-  email      String
-  role       MembershipRole
-  tokenHash  String         @unique
-  expiresAt  DateTime
-  acceptedAt DateTime?
-  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id          String         @id @default(cuid())
+  tenantId    String
+  name        String
+  email       String
+  role        MembershipRole
+  tokenHash   String         @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdById String?
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, email])
+  @@index([tenantId, acceptedAt, revokedAt, expiresAt])
 }
 
 model Customer {

@@ -10,9 +10,9 @@ Plateforme multi-tenant de gestion commerciale pour grossistes tunisiens. L'inte
 
 Les services applicatifs effectuent les contrôles de rôle, de tenant et de validation Zod côté serveur. Les requêtes métier utilisent le cookie de session HttpOnly et récupèrent le tenant depuis le membership serveur : l'API n'accepte pas de tenant ou rôle transmis par le client.
 
-## Routes Phase 2
+## Routes applicatives
 
-Après inscription ou connexion, l’application utilise le shell authentifié. Les routes disponibles sont `/dashboard`, `/clients`, `/catalogue/produits`, `/catalogue/categories`, `/catalogue/unites`, `/entrepots`, `/stock`, `/stock/mouvements`, `/stock/transferts`, `/stock/alertes` et `/parametres/profil`.
+Après inscription ou connexion, l’application utilise le shell authentifié. Les routes disponibles sont `/dashboard`, `/clients`, `/catalogue/produits`, `/catalogue/categories`, `/catalogue/unites`, `/entrepots`, `/stock`, `/stock/mouvements`, `/stock/transferts`, `/stock/alertes`, `/parametres/profil`, `/equipe`, `/equipe/invitations`, `/equipe/[membershipId]` et `/espace-employe`. Les invitations sont acceptées sur `/invitation/[token]`.
 
 Les clients, catégories, unités, produits et entrepôts sont recherchables, archivables et restaurables dans leur entreprise. Les produits, mouvements et niveaux de stock sont exclusivement lus depuis PostgreSQL.
 
@@ -48,6 +48,14 @@ La liste des commandes conserve recherche, statut, entrepôt, dates et page dans
 Le shell authentifié, les écrans métier, les formulaires, tables, dialogues, états vides et erreurs partagent le système de tokens centralisé dans `src/app/globals.css`. La palette de production est bleu nuit, bleu royal, bleu électrique et cyan discret, avec des panneaux bleu-gris, des ombres légères et une navigation mobile accessible. La connexion et l’inscription utilisent l’illustration logistique `public/distribflow-logistics.png` sans modifier le mécanisme de session.
 
 Le contrôle manuel couvre chaque route métier aux largeurs mobile (390 px), tablette et bureau : navigation, recherche, filtres, pagination, formulaires, confirmations, impression, chargements, résultats vides et erreurs serveur. Les données du tableau de bord proviennent exclusivement de PostgreSQL et restent filtrées par tenant et permissions ; aucune statistique métier n’est simulée. Les transitions respectent `prefers-reduced-motion` et les actions principales gardent une cible tactile d’au moins 44 px.
+
+## Équipe et configuration de démarrage
+
+Les routes `/equipe`, `/equipe/invitations`, `/equipe/[membershipId]`, `/invitation/[token]` et `/espace-employe` couvrent les statuts `INVITED`, `ACTIVE`, `SUSPENDED`, `ARCHIVED`. Les rôles employés sont `ADMIN`, `SALES`, `WAREHOUSE`, `DRIVER` et `READ_ONLY`; les anciens rôles restent compatibles pour les tenants existants. Le dernier propriétaire actif ne peut pas être suspendu, archivé ou rétrogradé.
+
+Une invitation utilise un token aléatoire à usage unique dont seul le hash SHA-256 est conservé, avec expiration, révocation, audit et prévention des doublons. En développement sans `EMAIL_WEBHOOK_URL`, l’interface affiche le lien à titre de contrôle ; en production, il est transmis uniquement à l’adaptateur email configuré. `/inscription` reste exclusivement l’inscription du propriétaire et les employés utilisent ensuite `/connexion`.
+
+Chaque nouvelle entreprise reçoit dans la transaction d’inscription les unités `PCE`, `CTN`, `PACK`, `KG`, `G`, `L`, `ML`, `M`, `PAL`, les catégories tunisiennes standard et `Dépôt principal`. Le bouton propriétaire des paramètres installe seulement les éléments manquants. Cette installation est idempotente et ne crée aucun client, produit, stock ou commande fictif. Le jeu de démonstration est limité à `npm run db:seed`.
 
 ## Feuille de route
 

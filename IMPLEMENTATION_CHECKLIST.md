@@ -3,7 +3,7 @@
 | Domaine | État | Détails |
 |---|---|---|
 | Interface tableau de bord | Terminé | KPIs, commandes récentes, stock et états de chargement/erreur alimentés par les données PostgreSQL du tenant. |
-| Authentification et tenant | Partiel | Onboarding, mots de passe scrypt, sessions et invitations persistés; écrans et acceptation d'invitation à ajouter |
+| Authentification et tenant | Terminé | Onboarding propriétaire, bootstrap idempotent, mots de passe scrypt, sessions multi-entreprises, invitations et acceptation sécurisées. |
 | Clients, catalogue, stock | Terminé | Clients, catalogue, entrepôts, opérations et historiques de stock tenant-scoped; imports CSV clients/produits avec aperçu, succès partiel, rapport sûr et idempotence par contraintes. |
 | Commandes | Terminé | Création, édition complète des lignes, duplication, recherche/filtrage/pagination URL-backed, résumé imprimable et actions contrôlées par rôle. |
 | Livraisons, chauffeur offline | Manquant | — |
@@ -12,10 +12,11 @@
 | Phase 4 — application terrain/PWA | À venir | Écrans mobiles par rôle, hors-ligne et synchronisation sécurisée à concevoir. |
 | Phase 3 — commandes et préparation | Terminé | Commandes tenant-scoped, numérotation atomique, totaux Decimal, snapshots, réservations, préparation, audit, source manuelle/WhatsApp, UI responsive, tests ciblés et migrations additives. |
 | Phase 5 — tournées, POD, encaissements et retours | À venir | Non démarrée. |
+| Équipe et employés | Terminé | `/equipe`, invitations, acceptation, statuts membership, rôles, règles dernier OWNER, audit et espace employé. |
 
-## Prochaine phase — gestion d’équipe
+## Phase livrée — gestion d’équipe
 
-La prochaine phase devra couvrir explicitement :
+Cette phase a couvert explicitement :
 
 - page de gestion d’équipe `/equipe` ;
 - invitation et activation des employés ;
@@ -24,3 +25,7 @@ La prochaine phase devra couvrir explicitement :
 - connexion partagée pour le propriétaire et les employés ;
 - redirection post-connexion selon le rôle ;
 - interfaces mobiles/PWA par rôle pour les employés.
+
+## Prochaine phase — application terrain/PWA
+
+Les interfaces mobiles/PWA opérationnelles par rôle, le mode hors ligne, les tournées, la preuve de livraison et les encaissements restent à construire.

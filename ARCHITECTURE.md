@@ -23,3 +23,9 @@ Les routes `/api/imports/customers` et `/api/imports/products` dérivent le cont
 `OrderReservation` conserve la quantité confirmée, consommée et libérée. La disponibilité est `StockLevel.quantity - somme(réservations actives non consommées)`. Les préparations créent des mouvements `SALE` et décrémentent le stock physique seulement pour le delta préparé ; une annulation libère sans créer de mouvement. Le cycle de préparation s’arrête à `READY_FOR_DELIVERY`; `OUT_FOR_DELIVERY`, `DELIVERED`, `PARTIALLY_DELIVERED` et `RETURNED` sont modélisés mais leurs transitions seront implémentées avec les livraisons d’une phase ultérieure.
 
 Les mises à jour de brouillon remplacent atomiquement l’ensemble des lignes après validation tenant-scoped et contrôle optimiste de `version`, ce qui couvre l’ajout, la modification et la suppression de lignes. Une duplication crée toujours un nouveau brouillon et consomme une nouvelle séquence. Les transitions enregistrent `OrderStatusHistory` et `AuditEvent`; une même clé d’idempotence de transition retourne l’état déjà enregistré.
+
+## Équipe et onboarding
+
+`src/lib/services/bootstrap.ts` installe les unités, catégories et l’entrepôt standard par `upsert` dans la transaction d’inscription. Le même service est appelé par l’action propriétaire de `/parametres/profil` et par le seed de développement ; il ne crée pas de données commerciales.
+
+`src/lib/services/team.ts` gère les memberships tenant-scoped et leurs statuts. Les invitations créent un compte sans mot de passe utilisable jusqu’à l’acceptation, conservent uniquement le hash du token et écrivent les événements d’audit. L’acceptation est transactionnelle et crée ou active le membership. `src/lib/services/email.ts` isole la livraison email et son modèle français. Les sessions portent l’entreprise active afin que `/api/auth/switch-company` vérifie à chaque changement l’appartenance active de l’utilisateur.

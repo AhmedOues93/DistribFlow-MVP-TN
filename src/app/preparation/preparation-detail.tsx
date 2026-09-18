@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/components/app-shell";
 
-const preparationRoles = ["PLATFORM_ADMIN", "OWNER", "WAREHOUSE_MANAGER"];
+const preparationRoles = ["PLATFORM_ADMIN", "OWNER", "ADMIN", "WAREHOUSE", "WAREHOUSE_MANAGER"];
 async function readResponse(response: Response) { const result = await response.json(); if (!response.ok) throw new Error(result.error ?? "Erreur serveur"); return result; }
 
 export default function PreparationDetail({ orderId }: { orderId: string }) {

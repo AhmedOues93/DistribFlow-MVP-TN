@@ -9,7 +9,7 @@ type Customer = { id: string; name: string; phone: string | null; whatsapp: stri
 type CustomerResponse = { items: Customer[]; pagination: { page: number; total: number; totalPages: number } };
 type FormValues = { name: string; phone: string; whatsapp: string; taxIdentifier: string; creditLimit: string; paymentTermsDays: string; notes: string; addresses: Address[] };
 const emptyForm = (): FormValues => ({ name: "", phone: "", whatsapp: "", taxIdentifier: "", creditLimit: "0", paymentTermsDays: "0", notes: "", addresses: [] });
-const canWrite = (role: string) => ["OWNER", "SALES_AGENT", "PLATFORM_ADMIN"].includes(role);
+const canWrite = (role: string) => ["OWNER", "ADMIN", "SALES", "SALES_AGENT", "PLATFORM_ADMIN"].includes(role);
 
 export default function CustomersClient() {
   const role = useRole();

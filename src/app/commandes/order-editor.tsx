@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRole } from "@/components/app-shell";
 
 type Line = { productId: string; quantity: string; discount: string };
-const writableRoles = ["PLATFORM_ADMIN", "OWNER", "SALES_AGENT"];
+const writableRoles = ["PLATFORM_ADMIN", "OWNER", "ADMIN", "SALES", "SALES_AGENT"];
 
 async function readResponse(response: Response) { const result = await response.json(); if (!response.ok) throw new Error(result.error ?? "Erreur serveur"); return result; }
 

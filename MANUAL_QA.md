@@ -1,6 +1,6 @@
-# QA manuel — Phase 2
+# QA manuel — opérations et équipe
 
-1. Inscrire une entreprise, puis vérifier la redirection vers `/clients`.
+1. Inscrire une entreprise, puis vérifier la redirection vers `/dashboard` et la présence des unités, catégories et de `Dépôt principal`.
 2. Créer un client avec deux adresses et sélectionner une adresse par défaut.
 3. Rechercher le client par nom, téléphone et matricule fiscal.
 4. Modifier ses conditions de paiement, puis actualiser la page pour confirmer la persistance.
@@ -21,3 +21,13 @@
 19. Utiliser recherche, statut, entrepôt, dates et pagination de `/commandes`; actualiser puis partager l’URL et vérifier que les filtres sont restaurés. Imprimer le détail et vérifier le résumé sans shell ni actions.
 20. Créer une commande avec la source WhatsApp, confirmer puis utiliser « Message WhatsApp » : vérifier les deux confirmations et l’ouverture d’un lien `wa.me` encodé, sans possibilité de fournir une URL arbitraire.
 21. Vérifier les états de chargement, liste vide, références absentes, validation de quantité/remise, conflit de version, stock insuffisant et erreur serveur sur les écrans commandes et préparation.
+
+## Équipe et onboarding
+
+22. Inscrire une nouvelle entreprise : vérifier les unités, catégories et `Dépôt principal`, puis confirmer qu’aucun client, produit, stock ou commande n’est créé automatiquement.
+23. Dans `/parametres/profil`, prévisualiser puis installer les données de démarrage. Répéter l’action et vérifier qu’aucun doublon ni écrasement n’apparaît.
+24. Comme OWNER, inviter un employé dans `/equipe`, vérifier le lien de développement, l’acceptation à usage unique et la redirection de connexion selon `SALES`, `WAREHOUSE`, `DRIVER` ou `READ_ONLY`.
+25. Vérifier dans `/equipe/invitations` le renvoi et la révocation. Vérifier qu’un email déjà membre ou une invitation active est refusé.
+26. Avec deux propriétaires, suspendre ou rétrograder l’un ; avec un seul propriétaire, vérifier le refus de suspendre, archiver ou rétrograder le dernier.
+27. Comme ADMIN, vérifier la gestion des employés mais le refus de modifier un OWNER ou d’attribuer OWNER. Vérifier qu’un membre suspendu ou archivé ne peut plus ouvrir le tenant.
+28. Vérifier le sélecteur d’entreprise pour un utilisateur multi-tenant et l’absence d’accès aux données de l’entreprise non sélectionnée.

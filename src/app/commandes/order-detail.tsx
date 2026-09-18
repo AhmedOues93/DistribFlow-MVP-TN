@@ -7,9 +7,9 @@ import { useRole } from "@/components/app-shell";
 
 const labels: Record<string, string> = { DRAFT: "Brouillon", CONFIRMED: "Confirmée", IN_PREPARATION: "En préparation", PREPARED: "Préparée", READY_FOR_DELIVERY: "Prête à livrer", OUT_FOR_DELIVERY: "En livraison", DELIVERED: "Livrée", PARTIALLY_DELIVERED: "Partiellement livrée", CANCELLED: "Annulée", RETURNED: "Retournée" };
 const actions: Record<string, { status: string; label: string }[]> = { DRAFT: [{ status: "CONFIRMED", label: "Confirmer et réserver" }, { status: "CANCELLED", label: "Annuler" }], CONFIRMED: [{ status: "IN_PREPARATION", label: "Démarrer la préparation" }, { status: "CANCELLED", label: "Annuler" }], IN_PREPARATION: [{ status: "PREPARED", label: "Marquer préparée" }], PREPARED: [{ status: "READY_FOR_DELIVERY", label: "Prête à livrer" }] };
-const readRoles = ["PLATFORM_ADMIN", "OWNER", "SALES_AGENT", "WAREHOUSE_MANAGER", "ACCOUNTANT", "VIEWER"];
-const writeRoles = ["PLATFORM_ADMIN", "OWNER", "SALES_AGENT"];
-const preparationRoles = ["PLATFORM_ADMIN", "OWNER", "WAREHOUSE_MANAGER"];
+const readRoles = ["PLATFORM_ADMIN", "OWNER", "ADMIN", "SALES", "WAREHOUSE", "SALES_AGENT", "WAREHOUSE_MANAGER", "ACCOUNTANT", "VIEWER", "READ_ONLY"];
+const writeRoles = ["PLATFORM_ADMIN", "OWNER", "ADMIN", "SALES", "SALES_AGENT"];
+const preparationRoles = ["PLATFORM_ADMIN", "OWNER", "ADMIN", "WAREHOUSE", "WAREHOUSE_MANAGER"];
 
 async function readResponse(response: Response) { const result = await response.json(); if (!response.ok) throw new Error(result.error ?? "Erreur serveur"); return result; }
 

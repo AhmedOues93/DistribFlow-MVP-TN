@@ -1,5 +1,9 @@
-import { OrderStatus, PrismaClient } from "@prisma/client";
+import { MembershipStatus, OrderStatus, PrismaClient } from "@prisma/client";
+import { installStarterData, getStarterDataPreview } from "../src/lib/services/bootstrap";
+import { getSessionContext, hashPassword, onboard, startSession } from "../src/lib/services/auth";
+import { acceptInvitation, changeMemberRole, changeMemberStatus, inviteMember, listMembers, revokeInvitation } from "../src/lib/services/team";
 import { createDraft, duplicateOrder, getOrder, recordPreparedQuantities, transitionOrder, updateDraft } from "../src/lib/services/orders";
+import { roleRedirect } from "../src/lib/tenant";
 
 const prisma = new PrismaClient();
 const context = { tenantId: "", role: "OWNER" as const, userId: "phase3-smoke" };
@@ -49,7 +53,67 @@ async function main() {
   let viewerRejected = false;
   try { await transitionOrder(trimmed.id, OrderStatus.CONFIRMED, { version: ready.version, idempotencyKey: "phase3-smoke-viewer" }, { tenantId: tenant.id, role: "VIEWER", userId: "phase3-smoke-viewer" }); } catch (error) { viewerRejected = error instanceof Error && error.message === "Action non autorisée"; }
   check(viewerRejected, "viewer transition rejected");
-  console.log(`Phase 3 PostgreSQL smoke passed: ${trimmed.number}, duplicate ${duplicate.number}, cancelled ${cancellable.number}`);
+  const employeeEmail = `phase3-employee-${Date.now()}@example.test`;
+  const ownerEmail = `phase3-owner-${Date.now()}@example.test`;
+  const employeeTenant = await onboard({ companyName: "Smoke Distribution", name: "Propriétaire Smoke", email: ownerEmail, password: "SmokePassword!2026" });
+  const starterPreview = await getStarterDataPreview(prisma, employeeTenant.tenantId);
+  check(starterPreview.units.toAdd === 0 && starterPreview.categories.toAdd === 0 && starterPreview.warehouse.toAdd === 0, "registration installs starter data");
+  await installStarterData(prisma, employeeTenant.tenantId);
+  const idempotentPreview = await getStarterDataPreview(prisma, employeeTenant.tenantId);
+  check(idempotentPreview.units.toAdd === 0 && idempotentPreview.categories.toAdd === 0 && idempotentPreview.warehouse.toAdd === 0, "starter data is idempotent");
+  const ownerMembership = await prisma.membership.findFirstOrThrow({ where: { tenantId: employeeTenant.tenantId, role: "OWNER" } });
+  const invitation = await inviteMember({ name: "Commercial Smoke", email: employeeEmail, role: "SALES" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  check(invitation.invitationUrl?.includes("/invitation/"), "development invitation link returned without exposing a token hash");
+  let duplicateInvitationRejected = false;
+  try { await inviteMember({ name: "Commercial Smoke", email: employeeEmail, role: "SALES" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId }); } catch (error) { duplicateInvitationRejected = error instanceof Error && error.message === "Une invitation active existe déjà"; }
+  check(duplicateInvitationRejected, "duplicate active invitation rejected");
+  const invitationToken = invitation.invitationUrl?.split("/invitation/")[1];
+  check(Boolean(invitationToken), "invitation token is available only in development workflow");
+  const accepted = await acceptInvitation(invitationToken!, "EmployeePassword!2026");
+  const employeeUser = await prisma.user.findUniqueOrThrow({ where: { id: accepted.userId } });
+  const employeeMembership = await prisma.membership.findUniqueOrThrow({ where: { tenantId_userId: { tenantId: employeeTenant.tenantId, userId: employeeUser.id } } });
+  check(employeeMembership.status === MembershipStatus.ACTIVE && employeeUser.passwordSet, "invitation acceptance activates employee login");
+  let singleUseRejected = false;
+  try { await acceptInvitation(invitationToken!, "EmployeePassword!2026"); } catch (error) { singleUseRejected = error instanceof Error && error.message === "Invitation expirée ou invalide"; }
+  check(singleUseRejected, "invitation is single use");
+  const employeeSession = await startSession({ email: employeeEmail, password: "EmployeePassword!2026" });
+  check(employeeSession.role === "SALES" && employeeSession.redirectTo === "/commandes", "employee login uses role redirect");
+  check(roleRedirect("OWNER") === "/dashboard" && roleRedirect("ADMIN") === "/dashboard" && roleRedirect("SALES") === "/commandes" && roleRedirect("WAREHOUSE") === "/preparation" && roleRedirect("DRIVER") === "/espace-employe" && roleRedirect("READ_ONLY") === "/dashboard", "all employee role redirects are explicit");
+  let teamAccessRejected = false;
+  try { await listMembers({ tenantId: employeeTenant.tenantId, role: "SALES", userId: employeeUser.id }); } catch (error) { teamAccessRejected = error instanceof Error && error.message === "Action non autorisée"; }
+  check(teamAccessRejected, "sales employee cannot manage team");
+  await changeMemberStatus(employeeMembership.id, MembershipStatus.SUSPENDED, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  check((await getSessionContext(employeeSession.token)) === null, "suspended employee session is denied");
+  await changeMemberStatus(employeeMembership.id, MembershipStatus.ACTIVE, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  check((await getSessionContext(employeeSession.token))?.tenantId === employeeTenant.tenantId, "reactivated employee session is restored");
+  let adminOwnerRejected = false;
+  try { await changeMemberRole(ownerMembership.id, { role: "SALES" }, { tenantId: employeeTenant.tenantId, role: "ADMIN", userId: employeeUser.id }); } catch (error) { adminOwnerRejected = error instanceof Error && error.message === "Un administrateur ne peut pas modifier un propriétaire"; }
+  check(adminOwnerRejected, "admin cannot modify owner");
+  const existingEmail = `phase3-existing-${Date.now()}@example.test`;
+  const existingUser = await prisma.user.create({ data: { name: "Utilisateur existant", email: existingEmail, passwordHash: await hashPassword("ExistingPassword!2026"), passwordSet: true } });
+  const existingInvitation = await inviteMember({ name: "Utilisateur existant", email: existingEmail, role: "READ_ONLY" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  const existingToken = existingInvitation.invitationUrl?.split("/invitation/")[1];
+  const existingAccepted = await acceptInvitation(existingToken!, undefined);
+  check(existingAccepted.userId === existingUser.id, "existing user acceptance keeps the account");
+  const revokedEmail = `phase3-revoked-${Date.now()}@example.test`;
+  const revokedInvitation = await inviteMember({ name: "Invitation révoquée", email: revokedEmail, role: "DRIVER" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  await revokeInvitation(revokedInvitation.invitationId, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  let revokedRejected = false;
+  try { await acceptInvitation(revokedInvitation.invitationUrl!.split("/invitation/")[1], "RevokedPassword!2026"); } catch (error) { revokedRejected = error instanceof Error && error.message === "Invitation expirée ou invalide"; }
+  check(revokedRejected, "revoked invitation cannot be accepted");
+  const expiredEmail = `phase3-expired-${Date.now()}@example.test`;
+  const expiredInvitation = await inviteMember({ name: "Invitation expirée", email: expiredEmail, role: "WAREHOUSE" }, { tenantId: employeeTenant.tenantId, role: "OWNER", userId: ownerMembership.userId });
+  await prisma.invitation.update({ where: { id: expiredInvitation.invitationId }, data: { expiresAt: new Date(0) } });
+  let expiredRejected = false;
+  try { await acceptInvitation(expiredInvitation.invitationUrl!.split("/invitation/")[1], "ExpiredPassword!2026"); } catch (error) { expiredRejected = error instanceof Error && error.message === "Invitation expirée ou invalide"; }
+  check(expiredRejected, "expired invitation cannot be accepted");
+  const teamAuditCount = await prisma.auditEvent.count({ where: { tenantId: employeeTenant.tenantId, entity: { in: ["Invitation", "Membership"] } } });
+  check(teamAuditCount >= 8, "employee lifecycle is audited");
+  const isolatedStarterTenant = await prisma.tenant.create({ data: { name: "Starter isolation smoke" } });
+  try { const isolatedPreview = await getStarterDataPreview(prisma, isolatedStarterTenant.id); check(isolatedPreview.units.existing === 0 && isolatedPreview.categories.existing === 0 && isolatedPreview.warehouse.existing === 0, "starter data does not cross tenants"); } finally { await prisma.tenant.delete({ where: { id: isolatedStarterTenant.id } }); }
+  await prisma.tenant.delete({ where: { id: employeeTenant.tenantId } });
+  await prisma.user.deleteMany({ where: { email: { in: [employeeEmail, existingEmail, revokedEmail, expiredEmail, ownerEmail] } } });
+  console.log(`Phase 3 PostgreSQL smoke passed: ${trimmed.number}, duplicate ${duplicate.number}, cancelled ${cancellable.number}, employee lifecycle and bootstrap`);
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());
