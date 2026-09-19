@@ -11,5 +11,5 @@ export function can(role: Role, permission: string) { return permissions[role].i
 export const employeeRoles: readonly Role[] = ["ADMIN", "SALES", "WAREHOUSE", "DRIVER", "READ_ONLY"];
 export function canonicalRole(role: Role): Role { return role === "SALES_AGENT" ? "SALES" : role === "WAREHOUSE_MANAGER" ? "WAREHOUSE" : role === "VIEWER" ? "READ_ONLY" : role; }
 export function isTeamManager(role: Role) { return role === "OWNER" || role === "ADMIN" || role === "PLATFORM_ADMIN"; }
-export function roleRedirect(role: Role) { switch (canonicalRole(role)) { case "SALES": return "/commandes"; case "WAREHOUSE": return "/preparation"; case "DRIVER": return "/espace-employe"; default: return "/dashboard"; } }
+export function roleRedirect(role: Role) { switch (canonicalRole(role)) { case "SALES": return "/travailleur/commandes"; case "WAREHOUSE": return "/travailleur/preparation"; case "DRIVER": return "/travailleur/livraisons"; case "READ_ONLY": return "/travailleur"; default: return "/dashboard"; } }
 export function assertTenant(tenantId: string | undefined): string { if (!tenantId) throw new Error("Contexte entreprise manquant"); return tenantId; }

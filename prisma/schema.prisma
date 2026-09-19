@@ -63,41 +63,82 @@ enum LedgerType {
   ADJUSTMENT
 }
 
+enum NotificationType {
+  EMPLOYEE_ACCEPTED_INVITATION
+  INVITATION_EMAIL_FAILED
+  EMPLOYEE_MESSAGE
+  EMPLOYEE_ATTACHMENT
+}
+
+enum ConversationType {
+  DIRECT
+  OPERATIONAL
+}
+
 model Tenant {
-  id             String             @id @default(cuid())
-  name           String
-  taxIdentifier  String?            @unique
-  currency       String             @default("TND")
-  timezone       String             @default("Africa/Tunis")
-  createdAt      DateTime           @default(now())
-  logoObjectKey  String?
-  logoMimeType   String?
-  logoSize       Int?
-  logoUpdatedAt  DateTime?
-  memberships    Membership[]
-  customers      Customer[]
-  products       Product[]
-  warehouses     Warehouse[]
-  orders         SalesOrder[]
-  invitations    Invitation[]
-  categories     ProductCategory[]
-  units          Unit[]
-  auditEvents    AuditEvent[]
-  importBatches  ImportBatch[]
-  orderSequences OrderSequence[]
-  reservations   OrderReservation[]
-  suspendedAt    DateTime?
+  id                 String              @id @default(cuid())
+  name               String
+  displayName        String?
+  taxIdentifier      String?             @unique
+  rneIdentifier      String?
+  businessActivity   String?
+  addressLine        String?
+  city               String?
+  governorate        String?
+  postalCode         String?
+  country            String              @default("Tunisie")
+  phone              String?
+  email              String?
+  website            String?
+  defaultLanguage    String              @default("fr")
+  currency           String              @default("TND")
+  timezone           String              @default("Africa/Tunis")
+  createdAt          DateTime            @default(now())
+  logoObjectKey      String?
+  logoMimeType       String?
+  logoSize           Int?
+  logoUpdatedAt      DateTime?
+  memberships        Membership[]
+  customers          Customer[]
+  products           Product[]
+  warehouses         Warehouse[]
+  orders             SalesOrder[]
+  invitations        Invitation[]
+  categories         ProductCategory[]
+  units              Unit[]
+  auditEvents        AuditEvent[]
+  importBatches      ImportBatch[]
+  orderSequences     OrderSequence[]
+  reservations       OrderReservation[]
+  suspendedAt        DateTime?
+  notifications      Notification[]
+  conversations      Conversation[]
+  messageAttachments MessageAttachment[]
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String
-  memberships  Membership[]
-  createdAt    DateTime     @default(now())
-  passwordHash String
-  passwordSet  Boolean      @default(true)
-  sessions     Session[]
+  id                       String                    @id @default(cuid())
+  email                    String                    @unique
+  name                     String
+  firstName                String?
+  lastName                 String?
+  displayName              String?
+  phone                    String?
+  preferredLanguage        String                    @default("fr")
+  avatarObjectKey          String?
+  avatarMimeType           String?
+  avatarSize               Int?
+  avatarUpdatedAt          DateTime?
+  memberships              Membership[]
+  createdAt                DateTime                  @default(now())
+  passwordHash             String
+  passwordSet              Boolean                   @default(true)
+  sessions                 Session[]
+  sentMessages             Message[]                 @relation("MessageSender")
+  conversationParticipants ConversationParticipant[]
+  messageReadStates        MessageReadState[]
+  notifications            Notification[]            @relation("UserNotifications")
+  createdConversations     Conversation[]            @relation("ConversationCreator")
 }
 
 model Membership {
@@ -129,20 +170,111 @@ model Session {
 }
 
 model Invitation {
-  id          String         @id @default(cuid())
-  tenantId    String
-  name        String
-  email       String
-  role        MembershipRole
-  tokenHash   String         @unique
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  revokedAt   DateTime?
-  createdById String?
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                String         @id @default(cuid())
+  tenantId          String
+  name              String
+  email             String
+  role              MembershipRole
+  tokenHash         String         @unique
+  expiresAt         DateTime
+  acceptedAt        DateTime?
+  revokedAt         DateTime?
+  createdById       String?
+  resendCount       Int            @default(0)
+  lastSentAt        DateTime?
+  lastDeliveryError String?
+  deliveryStatus    String         @default("PENDING")
+  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, email])
   @@index([tenantId, acceptedAt, revokedAt, expiresAt])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  tenantId    String
+  recipientId String
+  type        NotificationType
+  title       String
+  body        String
+  href        String?
+  metadata    Json?
+  dedupeKey   String?          @unique
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipient   User             @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, recipientId, readAt, createdAt])
+}
+
+model Conversation {
+  id           String                    @id @default(cuid())
+  tenantId     String
+  type         ConversationType
+  title        String?
+  createdById  String
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy    User                      @relation("ConversationCreator", fields: [createdById], references: [id])
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([tenantId, updatedAt])
+}
+
+model ConversationParticipant {
+  conversationId String
+  userId         String
+  joinedAt       DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String              @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  clientId       String
+  createdAt      DateTime            @default(now())
+  conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User                @relation("MessageSender", fields: [senderId], references: [id])
+  attachments    MessageAttachment[]
+  readStates     MessageReadState[]
+
+  @@unique([conversationId, clientId])
+  @@index([conversationId, createdAt])
+}
+
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  tenantId  String
+  messageId String
+  objectKey String
+  fileName  String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, messageId])
+}
+
+model MessageReadState {
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+  @@index([userId, readAt])
 }
 
 model Customer {

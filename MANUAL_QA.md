@@ -38,3 +38,11 @@
 30. Dans `/parametres/entreprise`, modifier le nom, importer un PNG/JPEG/WebP de moins de 2 Mo, vérifier l’aperçu, le logo du shell et le résumé imprimable. Vérifier le refus d’un SVG, d’un contenu dont l’extension ment et d’un fichier trop volumineux ; retirer ensuite le logo et confirmer le fallback par initiales.
 31. Sur `/connexion`, `/dashboard`, `/clients`, `/catalogue/produits`, `/commandes`, `/equipe`, `/parametres/entreprise`, `/invitation/[token]` et `/espace-employe`, inspecter 1440 px, 1024 px et 390 px : drawer mobile, navigation complète scrollable, focus clavier, aucune coupure ni débordement horizontal.
 32. Dans un navigateur sur le port réel de développement, inviter un employé, vérifier que le lien est un ancre cliquable sur la même origine et que « Ouvrir le lien » et « Copier le lien » donnent un retour de succès. Ouvrir le lien dans une fenêtre privée, accepter l’invitation puis se connecter avec la redirection du rôle.
+
+## Portail employé et communication
+
+33. Vérifier `/travailleur/connexion` avec un compte `SALES`, `WAREHOUSE`, `DRIVER` et `READ_ONLY`; confirmer le shell séparé, la redirection propre au rôle et le refus des routes administrateur.
+34. Depuis `/travailleur/profil`, modifier prénom, nom, téléphone, langue, avatar et mot de passe; vérifier l’état de chargement, l’erreur serveur, le garde-fou de navigation non enregistrée et la fermeture des autres sessions.
+35. Depuis `/parametres/entreprise`, modifier les champs d’identité, importer/supprimer un logo et vérifier que les rôles non autorisés voient un état lecture seule.
+36. Depuis `/travailleur/messages`, créer une conversation directe, envoyer un texte et une pièce jointe autorisée, vérifier le polling, la notification destinataire, la lecture et le refus d’un fichier non autorisé.
+37. Depuis `/notifications`, ouvrir une notification, tout marquer comme lu, vérifier le compteur et les états vide/chargement/erreur. Inspecter ces écrans à 390 px, 768 px et 1440 px sans débordement horizontal.

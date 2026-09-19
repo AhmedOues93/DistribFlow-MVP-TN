@@ -1,0 +1,8 @@
+import { NotificationType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { assertTenant, type Role } from "@/lib/tenant";
+type Context = { tenantId?: string; userId: string; role: Role };
+export async function listNotifications(context: Context, unreadOnly = false) { const tenantId = assertTenant(context.tenantId); return prisma.notification.findMany({ where: { tenantId, recipientId: context.userId, ...(unreadOnly ? { readAt: null } : {}) }, orderBy: { createdAt: "desc" }, take: 100 }); }
+export async function unreadCount(context: Context) { const tenantId = assertTenant(context.tenantId); return prisma.notification.count({ where: { tenantId, recipientId: context.userId, readAt: null } }); }
+export async function markNotificationsRead(input: { id?: string; all?: boolean }, context: Context) { const tenantId = assertTenant(context.tenantId); if (input.all) return prisma.notification.updateMany({ where: { tenantId, recipientId: context.userId, readAt: null }, data: { readAt: new Date() } }); if (!input.id) throw new Error("Notification introuvable"); return prisma.notification.updateMany({ where: { id: input.id, tenantId, recipientId: context.userId }, data: { readAt: new Date() } }); }
+export async function createNotification(input: { tenantId: string; recipientId: string; type: NotificationType; title: string; body: string; href?: string; metadata?: object; dedupeKey?: string }) { if (input.dedupeKey) { const existing = await prisma.notification.findUnique({ where: { dedupeKey: input.dedupeKey } }); if (existing) return existing; } return prisma.notification.create({ data: input }); }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Boxes, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, Package, Search, Settings, UserRound, Users, Warehouse, X } from "lucide-react";
+import { Bell, Boxes, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, LayoutDashboard, LogOut, Menu, MessageCircle, Package, Search, Settings, UserRound, Users, Warehouse, X } from "lucide-react";
 import { createContext, KeyboardEvent, useContext, useEffect, useMemo, useState } from "react";
 
 type NavigationItem = { href: string; label: string; icon: typeof LayoutDashboard; roles?: string[] };
@@ -20,9 +20,9 @@ const navigation: NavigationGroup[] = [
     { href: "/clients", label: "Clients", icon: Users, roles: ["PLATFORM_ADMIN", "OWNER", "ADMIN", "SALES", "SALES_AGENT", "ACCOUNTANT", "VIEWER", "READ_ONLY"] },
     { href: "/commandes", label: "Commandes", icon: ClipboardList, roles: readRoles },
     { href: "/preparation", label: "Préparation", icon: ClipboardList, roles: readRoles },
-    { href: "/espace-employe", label: "Espace employé", icon: UserRound, roles: ["ADMIN", "SALES", "WAREHOUSE", "DRIVER", "READ_ONLY", "SALES_AGENT", "WAREHOUSE_MANAGER", "VIEWER"] },
   ] },
   { label: "Organisation", items: [{ href: "/equipe", label: "Équipe", icon: Users, roles: ["PLATFORM_ADMIN", "OWNER", "ADMIN"] }] },
+  { label: "Communication", items: [{ href: "/messages", label: "Messages", icon: MessageCircle, roles: readRoles }, { href: "/notifications", label: "Notifications", icon: Bell, roles: readRoles }] },
   { label: "Référentiels", items: [
     { href: "/catalogue/produits", label: "Produits", icon: Package, roles: catalogueRoles },
     { href: "/catalogue/categories", label: "Catégories", icon: Boxes, roles: catalogueRoles },

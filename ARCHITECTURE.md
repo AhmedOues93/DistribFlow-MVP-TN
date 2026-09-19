@@ -35,3 +35,11 @@ Les mises à jour de brouillon remplacent atomiquement l’ensemble des lignes a
 `src/lib/services/search.ts` fournit une recherche globale debouncée sur les clients, produits et commandes. Chaque requête est limitée au tenant de session et aux permissions de lecture correspondantes ; les résultats ouvrent une fiche ou une liste filtrée par URL. Le shell conserve les états chargement, vide et erreur et prend en charge les flèches, Entrée et Échap.
 
 `src/lib/services/branding.ts` conserve uniquement les métadonnées sûres du logo (`objectKey`, type, taille et date) dans `Tenant`. `src/lib/storage.ts` abstrait un stockage local hors dépôt pour le développement et un stockage S3-compatible signé pour la production. L’accès au logo passe par une route contrôlée par session, et la validation vérifie les octets PNG/JPEG/WebP, la taille maximale de 2 Mo et l’appartenance au tenant.
+
+## Portail employé, profil et communication
+
+`src/app/travailleur/layout.tsx` sépare le portail employé du shell administrateur. `ProtectedPage` redirige les rôles opérationnels vers ce portail ; `/espace-employe` ne conserve qu’une redirection de compatibilité. Les pages worker réutilisent les services métier existants sans contourner les permissions.
+
+Les profils sont modifiés par `src/lib/services/profile.ts`, qui cible toujours `context.userId`; les paramètres entreprise passent par `branding.ts` et les rôles OWNER/ADMIN. Les médias sont stockés par clés aléatoires avec contrôle de contenu, taille, tenant et type MIME.
+
+`Notification` est une boîte de réception par destinataire, tenant et clé de déduplication. `Conversation`, `ConversationParticipant`, `Message`, `MessageAttachment` et `MessageReadState` forment la messagerie interne. Chaque requête vérifie le membership actif et la participation à la conversation; les messages sont idempotents par `(conversationId, clientId)`, les notifications sont dédupliquées, et les téléchargements de pièces jointes vérifient le participant avant de renvoyer un contenu avec `nosniff`. La livraison d’invitation est isolée dans `email.ts` derrière Resend ou l’adaptateur webhook local.

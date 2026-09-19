@@ -13,7 +13,7 @@ const login = z.object({ email: z.string().email(), password: z.string().min(1),
 
 export const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 export async function hashPassword(password: string) { const salt = randomBytes(16).toString("hex"); return `${salt}:${(await scrypt(password, salt, 64) as Buffer).toString("hex")}`; }
-async function verifyPassword(password: string, stored: string) { const [salt, expected] = stored.split(":"); if (!salt || !expected) return false; const actual = await scrypt(password, salt, 64) as Buffer; const expectedBuffer = Buffer.from(expected, "hex"); return expectedBuffer.length === actual.length && timingSafeEqual(actual, expectedBuffer); }
+export async function verifyPassword(password: string, stored: string) { const [salt, expected] = stored.split(":"); if (!salt || !expected) return false; const actual = await scrypt(password, salt, 64) as Buffer; const expectedBuffer = Buffer.from(expected, "hex"); return expectedBuffer.length === actual.length && timingSafeEqual(actual, expectedBuffer); }
 
 export type CompanyMembership = { tenantId: string; tenantName: string; role: Role; status: MembershipStatus };
 export type SessionContext = { sessionId: string; tenantId: string; role: Role; userId: string };
@@ -72,6 +72,11 @@ export async function startSession(input: unknown) {
   await prisma.session.create({ data: { userId: user.id, activeTenantId: membership.tenantId, tokenHash: hashToken(rawToken), expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14) } });
   const companies = activeCompanies(user);
   return { token: rawToken, tenantId: membership.tenantId, role: membership.role as Role, redirectTo: roleRedirect(membership.role as Role), companies };
+}
+
+export async function startEmployeeSession(input: unknown) {
+  const session = await startSession(input);
+  return { ...session, redirectTo: roleRedirect(session.role) };
 }
 
 export async function switchCompany(token: string | undefined, tenantId: string) {

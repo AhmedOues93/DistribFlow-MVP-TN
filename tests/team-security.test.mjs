@@ -43,10 +43,16 @@ test("team APIs and employee workspace expose the complete route set", async () 
     readFile("src/app/api/invitations/[token]/route.ts", "utf8"),
     readFile("src/app/api/tenant/starter-data/route.ts", "utf8"),
     readFile("src/app/espace-employe/page.tsx", "utf8"),
+    readFile("src/app/travailleur/layout.tsx", "utf8"),
+    readFile("src/app/api/auth/worker-login/route.ts", "utf8"),
+    readFile("src/app/api/messages/conversations/[conversationId]/messages/route.ts", "utf8"),
   ]);
   const source = routes.join("\n");
   assert.match(source, /requireRequestContext/);
   assert.match(source, /acceptInvitation/);
   assert.match(source, /installStarterData/);
-  assert.match(source, /Module livraisons bientôt disponible/);
+  assert.match(source, /redirect\("\/travailleur"\)/);
+  assert.match(source, /WorkerShell/);
+  assert.match(source, /startEmployeeSession/);
+  assert.match(source, /formData/);
 });

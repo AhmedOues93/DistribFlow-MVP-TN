@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.mjs tests/*.test.ts",
     "db:seed": "prisma db seed",
-    "db:smoke": "tsx scripts/phase3-smoke.ts"
+    "db:smoke": "tsx scripts/phase3-smoke.ts",
+    "db:employee-smoke": "tsx scripts/employee-portal-smoke.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.7.0",

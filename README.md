@@ -12,7 +12,7 @@ Les services applicatifs effectuent les contrôles de rôle, de tenant et de val
 
 ## Routes applicatives
 
-Après inscription ou connexion, l’application utilise le shell authentifié. Les routes disponibles sont `/dashboard`, `/clients`, `/catalogue/produits`, `/catalogue/categories`, `/catalogue/unites`, `/entrepots`, `/stock`, `/stock/mouvements`, `/stock/transferts`, `/stock/alertes`, `/parametres/profil`, `/parametres/entreprise`, `/equipe`, `/equipe/invitations`, `/equipe/[membershipId]` et `/espace-employe`. Les invitations sont acceptées sur `/invitation/[token]`.
+Après inscription ou connexion, l’application utilise le shell authentifié. Les routes disponibles sont `/dashboard`, `/clients`, `/catalogue/produits`, `/catalogue/categories`, `/catalogue/unites`, `/entrepots`, `/stock`, `/stock/mouvements`, `/stock/transferts`, `/stock/alertes`, `/parametres/profil`, `/parametres/entreprise`, `/equipe`, `/equipe/invitations`, `/equipe/[membershipId]`, `/messages`, `/notifications`, `/travailleur`, `/travailleur/connexion`, `/travailleur/preparation`, `/travailleur/commandes`, `/travailleur/livraisons`, `/travailleur/messages`, `/travailleur/notifications` et `/travailleur/profil`. `/espace-employe` reste une redirection de compatibilité vers `/travailleur`. Les invitations sont acceptées sur `/invitation/[token]`.
 
 Les clients, catégories, unités, produits et entrepôts sont recherchables, archivables et restaurables dans leur entreprise. Les produits, mouvements et niveaux de stock sont exclusivement lus depuis PostgreSQL.
 
@@ -30,6 +30,14 @@ Chaque ligne est validée, les doublons du fichier et de l’entreprise sont ref
 Les migrations versionnées sont la seule procédure de création ou d'évolution du schéma. Sur une nouvelle base, exécutez `npx prisma migrate deploy`, `npx prisma generate`, puis `npm run db:seed`. Vérifiez ensuite l'état avec `npx prisma migrate status`.
 
 Pour vérifier le flux Phase 3 contre PostgreSQL : `npm run db:smoke`. Le smoke crée des commandes de test dans le tenant de démonstration et vérifie les lignes, la numérotation, l’idempotence, les réservations, la consommation physique, l’audit, la duplication et l’annulation.
+
+## Portail employé et communication interne
+
+Les employés utilisent `/travailleur/connexion` et un shell séparé, sans accès aux routes administrateur. Les redirections sont `SALES → /travailleur/commandes`, `WAREHOUSE → /travailleur/preparation`, `DRIVER → /travailleur/livraisons` et `READ_ONLY → /travailleur`. Les sessions, memberships suspendus/archivés et chaque lecture restent contrôlés côté serveur.
+
+Le profil permet de modifier identité, téléphone, langue, avatar et mot de passe, de fermer les autres sessions et de contrôler l’accès par tenant. L’entreprise dispose d’un formulaire pour le nom légal/affiché, RNE, matricule fiscal, activité, adresse tunisienne, coordonnées, site, pays et langue. Les logos et avatars sont validés par octets et taille.
+
+Les invitations utilisent Resend via `RESEND_API_KEY` et `EMAIL_FROM`; `EMAIL_WEBHOOK_URL` est conservé comme adaptateur local de compatibilité. Les échecs de livraison sont visibles dans `/notifications`, le renvoi est limité par une fenêtre d’une minute et le lien de développement n’est affiché qu’en environnement non productif. Les messages directs et opérationnels sont tenant-scoped, limités aux memberships actifs, idempotents par `clientId`, notifiés aux destinataires et acceptent seulement des pièces jointes validées de 10 Mo maximum (`PNG`, `JPEG`, `WebP`, `PDF`, `TXT`, `CSV`). `npm run db:employee-smoke` vérifie l’invitation, le redirect worker, les notifications, le messaging et l’isolation tenant.
 
 ## Feuille de route
 
@@ -51,7 +59,7 @@ Le contrôle manuel couvre chaque route métier aux largeurs mobile (390 px), ta
 
 ## Équipe et configuration de démarrage
 
-Les routes `/equipe`, `/equipe/invitations`, `/equipe/[membershipId]`, `/invitation/[token]` et `/espace-employe` couvrent les statuts `INVITED`, `ACTIVE`, `SUSPENDED`, `ARCHIVED`. Les rôles employés sont `ADMIN`, `SALES`, `WAREHOUSE`, `DRIVER` et `READ_ONLY`; les anciens rôles restent compatibles pour les tenants existants. Le dernier propriétaire actif ne peut pas être suspendu, archivé ou rétrogradé.
+Les routes `/equipe`, `/equipe/invitations`, `/equipe/[membershipId]`, `/invitation/[token]` et `/travailleur/*` couvrent les statuts `INVITED`, `ACTIVE`, `SUSPENDED`, `ARCHIVED`. Les rôles employés sont `ADMIN`, `SALES`, `WAREHOUSE`, `DRIVER` et `READ_ONLY`; les anciens rôles restent compatibles pour les tenants existants. Le dernier propriétaire actif ne peut pas être suspendu, archivé ou rétrogradé.
 
 Une invitation utilise un token aléatoire à usage unique dont seul le hash SHA-256 est conservé, avec expiration, révocation, audit et prévention des doublons. En développement sans `EMAIL_WEBHOOK_URL`, l’interface affiche le lien à titre de contrôle ; en production, il est transmis uniquement à l’adaptateur email configuré. `/inscription` reste exclusivement l’inscription du propriétaire et les employés utilisent ensuite `/connexion`.
 

@@ -77,8 +77,8 @@ async function main() {
   try { await acceptInvitation(invitationToken!, "EmployeePassword!2026"); } catch (error) { singleUseRejected = error instanceof Error && error.message === "Invitation expirée ou invalide"; }
   check(singleUseRejected, "invitation is single use");
   const employeeSession = await startSession({ email: employeeEmail, password: "EmployeePassword!2026" });
-  check(employeeSession.role === "SALES" && employeeSession.redirectTo === "/commandes", "employee login uses role redirect");
-  check(roleRedirect("OWNER") === "/dashboard" && roleRedirect("ADMIN") === "/dashboard" && roleRedirect("SALES") === "/commandes" && roleRedirect("WAREHOUSE") === "/preparation" && roleRedirect("DRIVER") === "/espace-employe" && roleRedirect("READ_ONLY") === "/dashboard", "all employee role redirects are explicit");
+  check(employeeSession.role === "SALES" && employeeSession.redirectTo === "/travailleur/commandes", "employee login uses role redirect");
+  check(roleRedirect("OWNER") === "/dashboard" && roleRedirect("ADMIN") === "/dashboard" && roleRedirect("SALES") === "/travailleur/commandes" && roleRedirect("WAREHOUSE") === "/travailleur/preparation" && roleRedirect("DRIVER") === "/travailleur/livraisons" && roleRedirect("READ_ONLY") === "/travailleur", "all employee role redirects are explicit");
   let teamAccessRejected = false;
   try { await listMembers({ tenantId: employeeTenant.tenantId, role: "SALES", userId: employeeUser.id }); } catch (error) { teamAccessRejected = error instanceof Error && error.message === "Action non autorisée"; }
   check(teamAccessRejected, "sales employee cannot manage team");

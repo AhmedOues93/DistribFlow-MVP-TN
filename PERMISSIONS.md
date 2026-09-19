@@ -29,6 +29,17 @@ La recherche globale est disponible uniquement pour les ressources lisibles par 
 |---|---|---|
 | Owner | Inviter, renvoyer, révoquer, modifier, suspendre, réactiver, archiver | Accès complet |
 | Admin | Inviter, renvoyer, révoquer, modifier les employés, suspendre, réactiver, archiver | Accès opérationnel selon permissions |
+
+## Portail employé et communication
+
+| Fonction | Contrôle serveur |
+|---|---|
+| Connexion worker | Membership `ACTIVE`, entreprise active et rôle opérationnel; OWNER/ADMIN restent sur le shell administrateur |
+| Profil personnel | L’utilisateur ne peut modifier que son propre profil, avatar, mot de passe et sessions |
+| Entreprise | OWNER/ADMIN/PLATFORM_ADMIN uniquement; toutes les données sont limitées au tenant actif |
+| Conversations | Participant actif du même tenant; aucun accès par simple identifiant de conversation |
+| Pièces jointes | Participant actif, clé de stockage validée, MIME détecté par octets et limite 10 Mo |
+| Notifications | Destinataire exact et tenant exact; lecture idempotente et déduplication serveur |
 | Sales | Aucun accès équipe | Clients et commandes |
 | Warehouse | Aucun accès équipe | Stock et préparation |
 | Driver | Aucun accès équipe | Aucun module livraison jusqu’à la phase dédiée |

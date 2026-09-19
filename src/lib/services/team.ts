@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { MembershipRole, MembershipStatus, Prisma } from "@prisma/client";
+import { MembershipRole, MembershipStatus, NotificationType, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, hashToken } from "@/lib/services/auth";
@@ -30,13 +30,19 @@ export async function listMembers(context: Context, input: { query?: string; sta
 
 export async function listInvitations(context: Context) {
   const tenantId = tenant(context);
-  return prisma.invitation.findMany({ where: { tenantId }, select: { id: true, name: true, email: true, role: true, expiresAt: true, acceptedAt: true, revokedAt: true }, orderBy: { expiresAt: "desc" } });
+  return prisma.invitation.findMany({ where: { tenantId }, select: { id: true, name: true, email: true, role: true, expiresAt: true, acceptedAt: true, revokedAt: true, resendCount: true, lastSentAt: true, lastDeliveryError: true, deliveryStatus: true }, orderBy: { expiresAt: "desc" } });
 }
 
-async function deliverInvitation(invitation: { id: string; name: string; email: string; role: MembershipRole; expiresAt: Date }, companyName: string, token: string, requestOrigin?: string) {
+async function deliverInvitation(invitation: { id: string; name: string; email: string; role: MembershipRole; expiresAt: Date }, company: { name: string; displayName: string | null; logoObjectKey: string | null }, token: string, context: Context) {
+  const requestOrigin = context.requestOrigin;
   const url = invitationUrl(token, requestOrigin);
-  const emailSent = await sendInvitationEmail({ recipientName: invitation.name, recipientEmail: invitation.email, companyName, roleLabel: roleLabels[invitation.role] ?? invitation.role, invitationUrl: url, expiresAt: invitation.expiresAt });
-  return { emailSent, invitationUrl: !emailSent && process.env.NODE_ENV !== "production" ? url : undefined };
+  const result = await sendInvitationEmail({ recipientName: invitation.name, recipientEmail: invitation.email, companyName: company.displayName ?? company.name, roleLabel: roleLabels[invitation.role] ?? invitation.role, invitationUrl: url, expiresAt: invitation.expiresAt, inviterName: (await prisma.user.findUnique({ where: { id: context.userId }, select: { name: true } }))?.name, companyLogoUrl: company.logoObjectKey && requestOrigin ? `${requestOrigin}/api/tenant/branding/logo` : undefined });
+  await prisma.invitation.update({ where: { id: invitation.id }, data: { deliveryStatus: result.sent ? "SENT" : "FAILED", lastSentAt: result.sent ? new Date() : undefined, lastDeliveryError: result.sent ? null : result.error, resendCount: { increment: result.sent ? 1 : 0 } } });
+  if (!result.sent) {
+    const managers = await prisma.membership.findMany({ where: { tenantId: context.tenantId, status: MembershipStatus.ACTIVE, role: { in: [MembershipRole.OWNER, MembershipRole.ADMIN] } }, select: { userId: true } });
+    await Promise.all(managers.map(async (manager) => prisma.notification.create({ data: { tenantId: context.tenantId!, recipientId: manager.userId, type: NotificationType.INVITATION_EMAIL_FAILED, title: "Envoi d’invitation échoué", body: `L’invitation pour ${invitation.email} n’a pas pu être envoyée.`, href: "/equipe/invitations", dedupeKey: `invitation-email-failed:${invitation.id}:${invitation.expiresAt.toISOString()}`, metadata: { invitationId: invitation.id, error: result.error } } }).catch(() => undefined)));
+  }
+  return { emailSent: result.sent, emailError: result.error, invitationUrl: !result.sent && process.env.NODE_ENV !== "production" ? url : undefined };
 }
 
 export async function inviteMember(input: unknown, context: Context) {
@@ -60,18 +66,19 @@ export async function inviteMember(input: unknown, context: Context) {
     await tx.auditEvent.create({ data: { tenantId, actorId: context.userId, action: existing ? "INVITATION_RESENT" : "INVITATION_CREATED", entity: "Invitation", entityId: invitation.id, metadata: { role: invitation.role, email: invitation.email } } });
     return invitation;
   });
-  const company = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } });
-  return { ...(await deliverInvitation(record, company.name, token, context.requestOrigin)), invitationId: record.id };
+  const company = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true, displayName: true, logoObjectKey: true } });
+  return { ...(await deliverInvitation(record, company, token, context)), invitationId: record.id };
 }
 
 export async function resendInvitation(invitationId: string, context: Context) {
   const tenantId = tenant(context);
   const current = await prisma.invitation.findFirst({ where: { id: invitationId, tenantId, acceptedAt: null, revokedAt: null } });
   if (!current) throw new Error("Invitation introuvable ou déjà traitée");
+  if (current.lastSentAt && current.lastSentAt.getTime() > Date.now() - 60_000) throw new Error("Patientez une minute avant de renvoyer cette invitation");
   const token = randomToken(); const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
-  const record = await prisma.$transaction(async (tx) => { const updated = await tx.invitation.update({ where: { id: current.id }, data: { tokenHash: hashToken(token), expiresAt } }); await tx.auditEvent.create({ data: { tenantId, actorId: context.userId, action: "INVITATION_RESENT", entity: "Invitation", entityId: updated.id } }); return updated; });
-  const company = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } });
-  return { ...(await deliverInvitation(record, company.name, token, context.requestOrigin)), invitationId: record.id };
+  const record = await prisma.$transaction(async (tx) => { const updated = await tx.invitation.update({ where: { id: current.id }, data: { tokenHash: hashToken(token), expiresAt, deliveryStatus: "PENDING", lastDeliveryError: null } }); await tx.auditEvent.create({ data: { tenantId, actorId: context.userId, action: "INVITATION_RESENT", entity: "Invitation", entityId: updated.id } }); return updated; });
+  const company = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true, displayName: true, logoObjectKey: true } });
+  return { ...(await deliverInvitation(record, company, token, context)), invitationId: record.id };
 }
 
 export async function revokeInvitation(invitationId: string, context: Context) {
@@ -95,9 +102,12 @@ export async function acceptInvitation(token: string, password: string | undefin
     const user = await tx.user.findUnique({ where: { email: invitation.email } });
     if (!user) throw new Error("Invitation invalide");
     if (!user.passwordSet) { if (!password || password.length < 12) throw new Error("Un mot de passe de 12 caractères est requis"); await tx.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(password), passwordSet: true, name: invitation.name } }); }
-    const membership = await tx.membership.update({ where: { tenantId_userId: { tenantId: invitation.tenantId, userId: user.id } }, data: { role: invitation.role, status: MembershipStatus.ACTIVE, activatedAt: new Date(), suspendedAt: null, archivedAt: null } });
-    await tx.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } });
+    const acceptedAt = new Date();
+    const membership = await tx.membership.update({ where: { tenantId_userId: { tenantId: invitation.tenantId, userId: user.id } }, data: { role: invitation.role, status: MembershipStatus.ACTIVE, activatedAt: acceptedAt, suspendedAt: null, archivedAt: null } });
+    await tx.invitation.update({ where: { id: invitation.id }, data: { acceptedAt } });
     await tx.auditEvent.create({ data: { tenantId: invitation.tenantId, actorId: user.id, action: "INVITATION_ACCEPTED", entity: "Membership", entityId: membership.id, metadata: { invitationId: invitation.id } } });
+    const managers = await tx.membership.findMany({ where: { tenantId: invitation.tenantId, status: MembershipStatus.ACTIVE, role: { in: [MembershipRole.OWNER, MembershipRole.ADMIN] }, userId: { not: user.id } }, select: { userId: true } });
+    await Promise.all(managers.map(async (manager) => { const dedupeKey = `invitation-accepted:${invitation.id}:${manager.userId}`; const existing = await tx.notification.findUnique({ where: { dedupeKey } }); if (!existing) await tx.notification.create({ data: { tenantId: invitation.tenantId, recipientId: manager.userId, type: NotificationType.EMPLOYEE_ACCEPTED_INVITATION, title: "Invitation acceptée", body: `${invitation.name} a activé son accès.`, href: `/equipe/${membership.id}`, dedupeKey, metadata: { invitationId: invitation.id, membershipId: membership.id } } }); }));
     return { tenantId: invitation.tenantId, email: user.email, userId: user.id };
   });
 }
